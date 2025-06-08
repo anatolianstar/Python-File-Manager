@@ -180,4 +180,4 @@ README.md dosyasında projenin detayları var. Nasıl yapabilirim?"
 - **Status**: Production Ready
 
 ---
-*Bu proje Cursor AI asistanı ile pair programming yapılarak geliştirilmiştir.* 
+*Bu proje Cursor AI asistanı ile pair programming yapılarak geliştirilmiştir.*
