@@ -1,0 +1,47 @@
+# File Manager için gerekli kütüphaneler
+# Tkinter Python ile birlikte gelir, ek kurulum gerekmez
+
+# Dosya işlemleri için (Python built-in)
+pathlib
+
+# Hash hesaplama için (Python built-in)
+hashlib
+
+# Threading için (Python built-in)
+threading
+
+# Dosya kopyalama için (Python built-in)
+shutil
+
+# GUI için (Python built-in)
+tkinter
+
+# JSON işlemleri için (Python built-in)
+json
+
+# Sistem işlemleri için (Python built-in)
+os
+sys
+stat
+time
+
+# Collections için (Python built-in)
+collections
+
+# Functools için (Python built-in)
+functools
+
+# Logging için (Python built-in)
+logging
+
+# Unittest için (Python built-in)
+unittest
+
+# Asyncio için (Python built-in)
+asyncio
+
+# External packages (pip ile kurulması gerekir)
+aiofiles>=23.1.0
+
+# TTK için (tkinter ile birlikte gelir)
+# ttk - tkinter.ttk olarak kullanılır 
