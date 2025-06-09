@@ -1,0 +1,55 @@
+{
+  "app": {
+    "title": "Dosya Organizatörü",
+    "version": "v2.0"
+  },
+  "menu": {
+    "file": {
+      "select_source": "Kaynak Klasör Seç",
+      "select_target": "Hedef Klasör Seç",
+      "exit": "Çıkış"
+    },
+    "operations": {
+      "copy": "Kopyala",
+      "cut": "Kes",
+      "paste": "Yapıştır",
+      "delete": "Sil",
+      "rename": "Yeniden Adlandır"
+    }
+  },
+  "buttons": {
+    "scan": "Dosyaları Tara",
+    "organize": "Organizasyonu Başlat",
+    "cancel": "İptal",
+    "ok": "Tamam",
+    "back": "Geri",
+    "up": "Üst Klasör",
+    "refresh": "Yenile"
+  },
+  "messages": {
+    "scan_complete": "Tarama tamamlandı! {count} dosya bulundu",
+    "organization_complete": "Organizasyon tamamlandı!",
+    "error": "Hata: {error}",
+    "warning": "Uyarı: {message}",
+    "confirm_delete": "{item} silinsin mi?",
+    "folder_exists": "Klasör zaten mevcut. İçerikleri birleştir?",
+    "no_files_selected": "Dosya seçilmedi!"
+  },
+  "dialogs": {
+    "folder_conflict": {
+      "title": "Klasör Çakışması",
+      "message": "'{folder}' klasörü zaten mevcut!",
+      "merge": "İçerikleri Birleştir",
+      "rename": "Yeni İsimle Oluştur",
+      "cancel": "İptal"
+    },
+    "file_conflict": {
+      "title": "Dosya Çakışması",
+      "message": "'{file}' dosyası zaten mevcut!",
+      "overwrite": "Üstüne Yaz",
+      "skip": "Atla",
+      "overwrite_all": "Tümünü Yaz",
+      "skip_all": "Tümünü Atla"
+    }
+  }
+}

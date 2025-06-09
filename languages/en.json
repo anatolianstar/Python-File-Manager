@@ -1,0 +1,55 @@
+{
+  "app": {
+    "title": "File Organizer",
+    "version": "v2.0"
+  },
+  "menu": {
+    "file": {
+      "select_source": "Select Source Folder",
+      "select_target": "Select Target Folder",
+      "exit": "Exit"
+    },
+    "operations": {
+      "copy": "Copy",
+      "cut": "Cut",
+      "paste": "Paste",
+      "delete": "Delete",
+      "rename": "Rename"
+    }
+  },
+  "buttons": {
+    "scan": "Scan Files",
+    "organize": "Start Organization",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "back": "Back",
+    "up": "Up Folder",
+    "refresh": "Refresh"
+  },
+  "messages": {
+    "scan_complete": "Scan completed! {count} files found",
+    "organization_complete": "Organization completed!",
+    "error": "Error: {error}",
+    "warning": "Warning: {message}",
+    "confirm_delete": "Delete {item}?",
+    "folder_exists": "Folder already exists. Merge contents?",
+    "no_files_selected": "No files selected!"
+  },
+  "dialogs": {
+    "folder_conflict": {
+      "title": "Folder Conflict",
+      "message": "'{folder}' folder already exists!",
+      "merge": "Merge Contents",
+      "rename": "Create with New Name",
+      "cancel": "Cancel"
+    },
+    "file_conflict": {
+      "title": "File Conflict",
+      "message": "'{file}' file already exists!",
+      "overwrite": "Overwrite",
+      "skip": "Skip",
+      "overwrite_all": "Overwrite All",
+      "skip_all": "Skip All"
+    }
+  }
+}
