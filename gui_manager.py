@@ -8,6 +8,10 @@ from tkinter import ttk, messagebox, filedialog
 import os
 from pathlib import Path
 
+# Multi-language support
+from lang_manager import t, set_language, get_languages
+from language_switcher import LanguageSwitcher
+
 class GUIManager:
     def __init__(self, root):
         self.root = root
@@ -17,7 +21,7 @@ class GUIManager:
         
     def setup_main_window(self):
         """Ana pencere ayarları"""
-        self.root.title("Dosya Organizatörü - Modüler Versiyon")
+        self.root.title(t('app.title'))
         self.root.geometry("1400x800")
         self.root.minsize(1000, 600)
         
@@ -76,15 +80,22 @@ class GUIManager:
         top_frame = ttk.Frame(parent)
         top_frame.pack(fill=tk.X, pady=(0, 10))
         
+        # Language switcher - sağ üst köşe
+        lang_frame = ttk.Frame(top_frame)
+        lang_frame.grid(row=0, column=3, sticky=tk.E, padx=(10, 0))
+        
+        self.language_switcher = LanguageSwitcher(lang_frame, self.on_language_change)
+        self.language_switcher.pack()
+        
         # Source klasör seçimi
-        ttk.Label(top_frame, text="Kaynak Klasör:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
+        ttk.Label(top_frame, text=t('menu.file.select_source')).grid(row=0, column=0, sticky=tk.W, padx=(0, 5))
         ttk.Entry(top_frame, textvariable=self.source_var, width=50).grid(row=0, column=1, padx=(0, 5))
-        ttk.Button(top_frame, text="Seç", command=self.select_source_folder).grid(row=0, column=2)
+        ttk.Button(top_frame, text=t('buttons.select'), command=self.select_source_folder).grid(row=0, column=2)
         
         # Target SSD seçimi
-        ttk.Label(top_frame, text="Hedef SSD:").grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=(5, 0))
+        ttk.Label(top_frame, text=t('menu.file.select_target')).grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=(5, 0))
         ttk.Entry(top_frame, textvariable=self.target_var, width=50).grid(row=1, column=1, padx=(0, 5), pady=(5, 0))
-        ttk.Button(top_frame, text="Değiştir", command=self.select_target_folder).grid(row=1, column=2, pady=(5, 0))
+        ttk.Button(top_frame, text=t('buttons.change'), command=self.select_target_folder).grid(row=1, column=2, pady=(5, 0))
         
         # Alt klasör tarama seçeneği
         self.setup_scan_options(top_frame)
@@ -141,30 +152,30 @@ class GUIManager:
         nav_frame = ttk.Frame(left_frame)
         nav_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
         
-        ttk.Button(nav_frame, text="◀ Geri", command=self.go_back).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(nav_frame, text="▲ Üst Klasör", command=self.go_up).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(nav_frame, text="🏠 Ana Klasör", command=self.go_home).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(nav_frame, text="◀ " + t('buttons.back'), command=self.go_back).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(nav_frame, text="▲ " + t('buttons.up'), command=self.go_up).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(nav_frame, text="🏠 " + t('buttons.home'), command=self.go_home).pack(side=tk.LEFT, padx=(0, 5))
         
         # Yol gösterge çubuğu
         path_frame = ttk.Frame(left_frame)
         path_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
         
-        ttk.Label(path_frame, text="Konum:").pack(side=tk.LEFT)
+        ttk.Label(path_frame, text=t('labels.location') + ":").pack(side=tk.LEFT)
         self.path_entry = ttk.Entry(path_frame, textvariable=self.current_path_var, font=('Consolas', 9))
         self.path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5, 5))
         self.path_entry.bind('<Return>', self.navigate_to_path)
-        ttk.Button(path_frame, text="Git", command=self.navigate_to_path).pack(side=tk.RIGHT)
+        ttk.Button(path_frame, text=t('buttons.go'), command=self.navigate_to_path).pack(side=tk.RIGHT)
 
         # File manager kontrolleri
         target_controls = ttk.Frame(left_frame)
         target_controls.pack(fill=tk.X, padx=5, pady=5)
         
-        ttk.Button(target_controls, text="🔄 Yenile", command=self.refresh_target).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(target_controls, text="🗑️ Sil", command=self.delete_selected).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(target_controls, text="📋 Kopyala", command=self.copy_selected).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(target_controls, text="✂️ Kes", command=self.cut_selected).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(target_controls, text="📁 Yapıştır", command=self.paste_selected).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(target_controls, text="➕ Yeni Klasör", command=self.create_folder).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="🔄 " + t('buttons.refresh'), command=self.refresh_target).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="🗑️ " + t('buttons.delete'), command=self.delete_selected).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="📋 " + t('buttons.copy'), command=self.copy_selected).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="✂️ " + t('buttons.cut'), command=self.cut_selected).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="📁 " + t('buttons.paste'), command=self.paste_selected).pack(side=tk.LEFT, padx=(0, 5))
+        ttk.Button(target_controls, text="➕ " + t('buttons.new_folder'), command=self.create_folder).pack(side=tk.LEFT, padx=(0, 5))
         
         # Hedef klasör ağacı
         self.setup_target_tree(left_frame)
@@ -175,10 +186,10 @@ class GUIManager:
         target_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
         
         self.target_tree = ttk.Treeview(target_frame, columns=('size', 'type', 'modified'), show='tree headings')
-        self.target_tree.heading('#0', text='📁 Dosya/Klasör Adı', command=lambda: self.sort_tree('#0'))
-        self.target_tree.heading('size', text='📏 Boyut', command=lambda: self.sort_tree('size'))
-        self.target_tree.heading('type', text='🏷️ Tür', command=lambda: self.sort_tree('type'))
-        self.target_tree.heading('modified', text='📅 Değiştirilme', command=lambda: self.sort_tree('modified'))
+        self.target_tree.heading('#0', text='📁 ' + t('labels.file_folder_name'), command=lambda: self.sort_tree('#0'))
+        self.target_tree.heading('size', text='📏 ' + t('labels.size'), command=lambda: self.sort_tree('size'))
+        self.target_tree.heading('type', text='🏷️ ' + t('labels.type'), command=lambda: self.sort_tree('type'))
+        self.target_tree.heading('modified', text='📅 ' + t('labels.modified'), command=lambda: self.sort_tree('modified'))
         self.target_tree.column('#0', width=250)
         self.target_tree.column('size', width=80)
         self.target_tree.column('type', width=80)
@@ -192,6 +203,19 @@ class GUIManager:
         
         # Event bindings
         self.setup_target_tree_events()
+    
+    def on_language_change(self, lang_code):
+        """Dil değiştirildiğinde tüm UI'ı güncelle"""
+        # Ana pencere başlığını güncelle
+        self.root.title(t('app.title'))
+        
+        # Tüm widget'ları yeniden yükle
+        self.refresh_ui_texts()
+        
+    def refresh_ui_texts(self):
+        """Tüm UI metinlerini yenile"""
+        # Ana widget'ları güncelleme gelecek sürümlerde geliştirilecek
+        pass
         
     def setup_target_tree_events(self):
         """Target tree event bindings"""

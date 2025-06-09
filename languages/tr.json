@@ -24,7 +24,25 @@
     "ok": "Tamam",
     "back": "Geri",
     "up": "Üst Klasör",
-    "refresh": "Yenile"
+    "refresh": "Yenile",
+    "select": "Seç",
+    "change": "Değiştir",
+    "delete": "Sil",
+    "copy": "Kopyala",
+    "cut": "Kes",
+    "paste": "Yapıştır",
+    "new_folder": "Yeni Klasör",
+    "open": "Aç",
+    "rename": "Yeniden Adlandır",
+    "home": "Ana Klasör",
+    "go": "Git"
+  },
+  "labels": {
+    "location": "Konum",
+    "file_folder_name": "Dosya/Klasör Adı",
+    "size": "Boyut",
+    "type": "Tür",
+    "modified": "Değiştirilme"
   },
   "messages": {
     "scan_complete": "Tarama tamamlandı! {count} dosya bulundu",
@@ -33,9 +51,50 @@
     "warning": "Uyarı: {message}",
     "confirm_delete": "{item} silinsin mi?",
     "folder_exists": "Klasör zaten mevcut. İçerikleri birleştir?",
-    "no_files_selected": "Dosya seçilmedi!"
+    "no_files_selected": "Dosya seçilmedi!",
+    "invalid_folder_path": "Geçersiz klasör yolu!",
+    "access_denied": "Bu klasöre erişim izniniz yok!",
+    "folder_load_error": "Klasör yüklenirken hata: {error}",
+    "file_open_error": "Dosya açılamadı: {error}",
+    "select_file_to_delete": "Silinecek dosya seçin!",
+    "delete_confirmation": "Silme Onayı",
+    "delete_error": "'{file}' silinemedi: {error}",
+    "select_file_to_copy": "Kopyalanacak dosya seçin!",
+    "select_file_to_cut": "Kesilecek dosya seçin!",
+    "no_file_to_paste": "Yapıştırılacak dosya yok!",
+    "unknown_clipboard_operation": "Clipboard işlem türü bilinmiyor!",
+    "folder_create_error": "Klasör oluşturulamadı: {error}",
+    "select_file_to_open": "Açılacak dosya/klasör seçin!",
+    "file_open_failed": "'{file}' açılamadı: {error}",
+    "select_file_to_rename": "Yeniden adlandırılacak dosya seçin!",
+    "select_single_file": "Tek dosya seçin!",
+    "rename_error": "Yeniden adlandırılamadı: {error}",
+    "select_file_for_properties": "Özelliklerini görmek istediğiniz dosyayı seçin!",
+    "properties": "Özellikler",
+    "properties_error": "Özellikler alınırken hata: {error}",
+    "move_confirmation": "Taşıma Onayı",
+    "move_error": "Taşıma hatası: {error}",
+    "select_file_please": "Lütfen bir dosya seçin!",
+    "location_open_error": "Dosya konumu açılamadı: {error}",
+    "file_not_found": "Dosya bulunamadı!",
+    "file_info": "Dosya Bilgileri",
+    "file_info_error": "Dosya bilgileri alınamadı: {error}",
+    "hash_only_for_files": "Sadece dosyalar için hash hesaplanabilir!",
+    "file_hash": "Dosya Hash",
+    "file_create_error": "Dosya oluşturulamadı: {error}",
+    "folder_properties": "Klasör Özellikleri",
+    "folder_info_error": "Klasör bilgileri alınamadı: {error}"
   },
-  "dialogs": {
+    "dialogs": {
+    "error": {
+      "title": "Hata"
+    },
+    "warning": {
+      "title": "Uyarı"
+    },
+    "info": {
+      "title": "Bilgi"
+    },
     "folder_conflict": {
       "title": "Klasör Çakışması",
       "message": "'{folder}' klasörü zaten mevcut!",
@@ -44,7 +103,7 @@
       "cancel": "İptal"
     },
     "file_conflict": {
-      "title": "Dosya Çakışması",
+      "title": "Dosya Çakışması", 
       "message": "'{file}' dosyası zaten mevcut!",
       "overwrite": "Üstüne Yaz",
       "skip": "Atla",

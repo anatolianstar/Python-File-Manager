@@ -10,6 +10,10 @@ import os
 import shutil
 import traceback  # Debug için
 
+# Multi-language support
+from lang_manager import t, set_language, get_languages
+from language_switcher import LanguageSwitcher
+
 # Modülleri import et
 try:
     from gui_manager import GUIManager

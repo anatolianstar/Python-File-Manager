@@ -24,7 +24,25 @@
     "ok": "OK",
     "back": "Back",
     "up": "Up Folder",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "select": "Select",
+    "change": "Change",
+    "delete": "Delete",
+    "copy": "Copy",
+    "cut": "Cut",
+    "paste": "Paste",
+    "new_folder": "New Folder",
+    "open": "Open",
+    "rename": "Rename",
+    "home": "Home Folder",
+    "go": "Go"
+  },
+  "labels": {
+    "location": "Location",
+    "file_folder_name": "File/Folder Name",
+    "size": "Size",
+    "type": "Type",
+    "modified": "Modified"
   },
   "messages": {
     "scan_complete": "Scan completed! {count} files found",
@@ -33,9 +51,50 @@
     "warning": "Warning: {message}",
     "confirm_delete": "Delete {item}?",
     "folder_exists": "Folder already exists. Merge contents?",
-    "no_files_selected": "No files selected!"
+    "no_files_selected": "No files selected!",
+    "invalid_folder_path": "Invalid folder path!",
+    "access_denied": "Access denied to this folder!",
+    "folder_load_error": "Error loading folder: {error}",
+    "file_open_error": "Could not open file: {error}",
+    "select_file_to_delete": "Select file to delete!",
+    "delete_confirmation": "Delete Confirmation",
+    "delete_error": "Could not delete '{file}': {error}",
+    "select_file_to_copy": "Select file to copy!",
+    "select_file_to_cut": "Select file to cut!",
+    "no_file_to_paste": "No file to paste!",
+    "unknown_clipboard_operation": "Unknown clipboard operation!",
+    "folder_create_error": "Could not create folder: {error}",
+    "select_file_to_open": "Select file/folder to open!",
+    "file_open_failed": "Could not open '{file}': {error}",
+    "select_file_to_rename": "Select file to rename!",
+    "select_single_file": "Select single file!",
+    "rename_error": "Could not rename: {error}",
+    "select_file_for_properties": "Select file to view properties!",
+    "properties": "Properties",
+    "properties_error": "Error getting properties: {error}",
+    "move_confirmation": "Move Confirmation",
+    "move_error": "Move error: {error}",
+    "select_file_please": "Please select a file!",
+    "location_open_error": "Could not open file location: {error}",
+    "file_not_found": "File not found!",
+    "file_info": "File Information",
+    "file_info_error": "Could not get file information: {error}",
+    "hash_only_for_files": "Hash can only be calculated for files!",
+    "file_hash": "File Hash",
+    "file_create_error": "Could not create file: {error}",
+    "folder_properties": "Folder Properties",
+    "folder_info_error": "Could not get folder information: {error}"
   },
   "dialogs": {
+    "error": {
+      "title": "Error"
+    },
+    "warning": {
+      "title": "Warning"
+    },
+    "info": {
+      "title": "Information"
+    },
     "folder_conflict": {
       "title": "Folder Conflict",
       "message": "'{folder}' folder already exists!",

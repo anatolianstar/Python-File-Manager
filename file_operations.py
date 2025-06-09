@@ -15,6 +15,9 @@ import stat
 from collections import defaultdict
 import threading
 
+# Multi-language support
+from lang_manager import t
+
 class FileOperations:
     def __init__(self, gui_manager):
         self.gui = gui_manager
@@ -324,7 +327,7 @@ class FileOperations:
             self.current_path = path
             self.refresh_target()
         else:
-            messagebox.showerror("Hata", "Geçersiz klasör yolu!")
+            messagebox.showerror(t('dialogs.error.title'), t('messages.invalid_folder_path'))
             self.gui.current_path_var.set(self.current_path)
     
     def refresh_target(self, add_to_history=True):
@@ -386,9 +389,9 @@ class FileOperations:
             self.gui.status_var.set(f"📁 {len([i for i in items if i[5]])} klasör, 📄 {len([i for i in items if not i[5]])} dosya")
             
         except PermissionError:
-            messagebox.showerror("Hata", "Bu klasöre erişim izniniz yok!")
+            messagebox.showerror(t('dialogs.error.title'), t('messages.access_denied'))
         except Exception as e:
-            messagebox.showerror("Hata", f"Klasör yüklenirken hata: {e}")
+            messagebox.showerror(t('dialogs.error.title'), t('messages.folder_load_error', error=str(e)))
     
     def get_modified_time(self, file_path):
         """Dosya değiştirilme zamanını al"""
