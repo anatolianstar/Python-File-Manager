@@ -14,9 +14,11 @@ import time
 import stat
 from collections import defaultdict
 import threading
+import traceback
 
 # Multi-language support
 from lang_manager import t
+from lang_manager import lang_manager
 
 class FileOperations:
     def __init__(self, gui_manager):
@@ -47,10 +49,10 @@ class FileOperations:
         self.setup_drag_drop()
         
     def get_file_categories(self):
-        """Dosya kategorilerini döndür - YENİ ALGORİTMA"""
+        """Dosya kategorilerini döndür - SABİT İNGİLİZCE SİSTEM"""
         return {
             'image_files': {
-                'folder': 'Resim Dosyaları',           # Açıklayıcı kategori ismi
+                'folder': 'Image Files',           # Sabit İngilizce
                 'extensions': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif', '.svg', '.webp', '.ico', '.psd', '.ai', '.eps'],
                 'subfolders': {
                     '.jpg': 'JPG',
@@ -69,7 +71,7 @@ class FileOperations:
                 }
             },
             'document_files': {
-                'folder': 'Belge Dosyaları',           # Açıklayıcı kategori ismi
+                'folder': 'Document Files',           # Sabit İngilizce
                 'extensions': ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt', '.xls', '.xlsx', '.ppt', '.pptx', '.csv'],
                 'subfolders': {
                     '.pdf': 'PDF',
@@ -86,7 +88,7 @@ class FileOperations:
                 }
             },
             'video_files': {
-                'folder': 'Video Dosyaları',           # Açıklayıcı kategori ismi
+                'folder': 'Video Files',           # Sabit İngilizce
                 'extensions': ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.mpg', '.mpeg'],
                 'subfolders': {
                     '.mp4': 'MP4',
@@ -103,7 +105,7 @@ class FileOperations:
                 }
             },
             'audio_files': {
-                'folder': 'Ses Dosyaları',             # Açıklayıcı kategori ismi
+                'folder': 'Audio Files',             # Sabit İngilizce
                 'extensions': ['.mp3', '.wav', '.flac', '.aac', '.ogg', '.wma', '.m4a', '.opus'],
                 'subfolders': {
                     '.mp3': 'MP3',
@@ -117,7 +119,7 @@ class FileOperations:
                 }
             },
             'archive_files': {
-                'folder': 'Arşiv Dosyaları',           # Açıklayıcı kategori ismi
+                'folder': 'Compressed Files',           # Sabit İngilizce
                 'extensions': ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.iso'],
                 'subfolders': {
                     '.zip': 'ZIP',
@@ -131,7 +133,7 @@ class FileOperations:
                 }
             },
             'program_files': {
-                'folder': 'Program Dosyaları',         # Açıklayıcı kategori ismi
+                'folder': 'Program Files',         # Sabit İngilizce
                 'extensions': ['.exe', '.msi', '.deb', '.rpm', '.dmg', '.pkg', '.app', '.apk'],
                 'subfolders': {
                     '.exe': 'EXE',
@@ -144,8 +146,14 @@ class FileOperations:
                     '.apk': 'APK'
                 }
             },
+            'software_packages': {
+                'folder': 'Software Packages',          # Sabit İngilizce - yazılım paketleri
+                'extensions': [],  # Boş - uzantı bazlı tarama yapılmaz
+                'subfolders': {},  # Boş - alt klasör oluşturulmaz
+                'duplicate_only': True  # Sadece duplicate tarama yapılır
+            },
             'cad_3d_files': {
-                'folder': 'CAD ve 3D Dosyaları',      # Açıklayıcı kategori ismi
+                'folder': 'CAD and 3D Files',      # Sabit İngilizce
                 'extensions': [
                     # CAD Uzantıları
                     '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs',
@@ -153,6 +161,8 @@ class FileOperations:
                     '.stl', '.obj', '.3mf', '.ply', '.fbx', '.dae', '.blend',
                     # 3D Yazılım Uzantıları
                     '.max', '.mtl', '.c4d', '.ma', '.mb', '.skp', '.3ds', '.lwo', '.lws',
+                    # FBX Preset Dosyaları
+                    '.fbximportpreset', '.fbxexportpreset',
                     # Diğer 3D Formatları
                     '.x3d', '.collada', '.gltf', '.glb', '.usd', '.usda', '.usdc'
                 ],
@@ -182,6 +192,9 @@ class FileOperations:
                     '.3ds': '3DS_MAX',
                     '.lwo': 'LIGHTWAVE',
                     '.lws': 'LIGHTWAVE_SCENE',
+                    # FBX Presets
+                    '.fbximportpreset': 'FBX_IMPORT_PRESET',
+                    '.fbxexportpreset': 'FBX_EXPORT_PRESET',
                     # Modern 3D
                     '.x3d': 'X3D',
                     '.collada': 'COLLADA',
@@ -193,7 +206,7 @@ class FileOperations:
                 }
             },
             'code_files': {
-                'folder': 'Kod Dosyaları',             # Açıklayıcı kategori ismi
+                'folder': 'Code Files',             # Sabit İngilizce
                 'extensions': ['.py', '.js', '.html', '.css', '.php', '.java', '.cpp', '.c', '.cs', '.rb', '.go', '.rs', '.swift'],
                 'subfolders': {
                     '.py': 'PYTHON',
@@ -212,7 +225,7 @@ class FileOperations:
                 }
             },
             'font_files': {
-                'folder': 'Font Dosyaları',            # Açıklayıcı kategori ismi
+                'folder': 'Font Files',            # Sabit İngilizce
                 'extensions': ['.ttf', '.otf', '.woff', '.woff2', '.eot'],
                 'subfolders': {
                     '.ttf': 'TTF',
@@ -223,7 +236,7 @@ class FileOperations:
                 }
             },
             'other_files': {
-                'folder': 'Diğer Dosyalar',            # Bilinmeyen uzantılar için
+                'folder': 'Other Files',            # Sabit İngilizce - Bilinmeyen uzantılar için
                 'extensions': [],  # Boş - tüm bilinmeyen uzantılar buraya gider
                 'subfolders': {}   # Dynamic olarak oluşturulacak
             }
@@ -242,52 +255,68 @@ class FileOperations:
             if extension in category_info['extensions']:
                 return category_name, category_info
         
-        # Bilinmeyen uzantılar için "Diğer Dosyalar" kategorisi
-        other_category = categories['other_files']
+        # Bilinmeyen uzantılar için TARGET LEARNING sistemini kontrol et
+        learned_result = self._check_learned_category_for_scan(extension)
+        if learned_result:
+            # Öğrenilmiş kategori bulundu
+            learned_category = learned_result['category']
+            if learned_category in categories:
+                return learned_category, categories[learned_category]
         
-        # Dynamic subfolder oluştur
-        if extension:
-            ext_name = extension.replace('.', '').upper()
-            # Eğer uzantı varsa uzantı ismini kullan
-            if ext_name not in other_category['subfolders']:
-                other_category['subfolders'][extension] = ext_name
-        else:
-            # Uzantısız dosyalar için
-            if '' not in other_category['subfolders']:
-                other_category['subfolders'][''] = 'Uzantısız'
-        
-        return 'other_files', other_category
+        # Hala bulunamadıysa en yaygın kategori olan document_files'a koy
+        # "Other Files" kategorisi oluşturmak yerine
+        print(f"⚠️ Unknown extension {extension}, defaulting to document_files")
+        return 'document_files', categories['document_files']
     
     def select_source_folder(self):
         """Kaynak klasör seçimi"""
-        folder = filedialog.askdirectory(title="Kaynak Klasör Seçin")
+        folder = filedialog.askdirectory(title=t('dialogs.select_source'))
         if folder:
             self.source_path = folder
             self.gui.source_var.set(folder)
-            self.gui.status_var.set(f"Kaynak klasör seçildi: {folder}")
+            
+            # KAYNAK SEÇİLDİĞİNDE TARGET'TAKİ ÖĞRENME SİSTEMİNİ HEMEN YÜKLE
+            if hasattr(self, 'target_path') and self.target_path:
+                self.load_learned_categories()
+                print(f"📂 Source selected: {folder}")
+                print(f"🎯 Target: {self.target_path}")
+                print(f"📚 Learning loaded: {len(self.learned_categories)} extensions")
+                if self.learned_categories:
+                    print(f"📋 Learned extensions: {list(self.learned_categories.keys())}")
+                    for ext, cat in self.learned_categories.items():
+                        print(f"   {ext} → {cat}")
+                else:
+                    print("📭 No learning found - will use default English categories")
+            
+            self.gui.status_var.set(t('messages.source_selected', folder=folder))
             
             # Kaynak tree'yi temizle
             self.gui.source_tree.delete(*self.gui.source_tree.get_children())
         else:
-            self.gui.status_var.set("Kaynak klasör seçimi iptal edildi.")
+            self.gui.status_var.set(t('messages.source_cancelled'))
     
     def select_target_folder(self):
         """Hedef klasör seçimi"""
-        folder = filedialog.askdirectory(title="Hedef SSD Seçin", initialdir=self.target_path)
+        folder = filedialog.askdirectory(title=t('dialogs.select_target'), initialdir=self.target_path)
         if folder:
             self.target_path = folder
             self.current_path = folder
             self.gui.target_var.set(folder)
             self.gui.current_path_var.set(folder)
             
+            # Yeni target seçildi - öğrenme sistemini yeniden yükle
+            self.load_learned_categories()
+            print(f"🎯 Target changed: {folder}")
+            print(f"📚 Learning reloaded: {len(self.learned_categories)} extensions")
+            
             # Ayarları kaydet
             self.save_settings()
             
             # Hedef klasörü yenile
             self.refresh_target()
-            self.gui.status_var.set(f"Hedef klasör değiştirildi: {folder}")
+            self.gui.status_var.set(t('messages.target_changed', folder=folder))
         else:
-            self.gui.status_var.set("Hedef klasör seçimi iptal edildi.")
+            self.gui.status_var.set(t('messages.target_cancelled'))
     
     def add_to_history(self, path):
         """Navigasyon geçmişine ekle"""
@@ -386,7 +415,11 @@ class FileOperations:
                                           values=(size, item_type, modified),
                                           tags=('directory' if is_dir else 'file',))
             
-            self.gui.status_var.set(f"📁 {len([i for i in items if i[5]])} klasör, 📄 {len([i for i in items if not i[5]])} dosya")
+            # Status mesajını çeviri sistemi ile göster
+            folder_count = len([i for i in items if i[5]])
+            file_count = len([i for i in items if not i[5]])
+            status_message = f"📁 {folder_count} {t('status.folders')}, 📄 {file_count} {t('status.files')}"
+            self.gui.status_var.set(status_message)
             
         except PermissionError:
             messagebox.showerror(t('dialogs.error.title'), t('messages.access_denied'))
@@ -400,7 +433,8 @@ class FileOperations:
             timestamp = os.path.getmtime(file_path)
             return time.strftime("%d.%m.%Y %H:%M", time.localtime(timestamp))
         except:
-            return "Bilinmiyor"
+            from lang_manager import t
+            return t('properties.unknown')
     
     def is_hidden_file(self, filename, file_path=None):
         """Gizli dosya kontrolü - Ana programdan alındı"""
@@ -511,7 +545,7 @@ class FileOperations:
         
         if os.path.isdir(item_path):
             # Klasöre gir
-            print(f"📁 Klasöre giriliyor: {item_path}")
+            print(f"📁 {lang_manager.get_text('messages.entering_folder').format(path=item_path)}")
             self.add_to_history(self.current_path)
             self.current_path = item_path
             self.gui.current_path_var.set(item_path)
@@ -540,19 +574,19 @@ class FileOperations:
             
             if selection:
                 # Dosya/klasör seçili
-                context_menu.add_command(label="🔓 Aç", command=self.open_selected)
-                context_menu.add_command(label="🔍 Dosya Konumunu Aç", command=self.open_file_location)
+                context_menu.add_command(label=t('context_menu.open'), command=self.open_selected)
+                context_menu.add_command(label=t('context_menu.open_location'), command=self.open_file_location)
                 context_menu.add_separator()
-                context_menu.add_command(label="📋 Kopyala (Ctrl+C)", command=self.copy_selected)
-                context_menu.add_command(label="✂️ Kes (Ctrl+X)", command=self.cut_selected)
+                context_menu.add_command(label=t('context_menu.copy'), command=self.copy_selected)
+                context_menu.add_command(label=t('context_menu.cut'), command=self.cut_selected)
                 
                 # Yapıştırma - pano doluysa aktif
-                paste_state = tk.NORMAL if self.clipboard else tk.DISABLED
-                context_menu.add_command(label="📁 Yapıştır (Ctrl+V)", command=self.paste_selected, state=paste_state)
+                paste_state = tk.NORMAL if self.clipboard_data else tk.DISABLED
+                context_menu.add_command(label=t('context_menu.paste'), command=self.paste_selected, state=paste_state)
                 
                 context_menu.add_separator()
-                context_menu.add_command(label="🗑️ Sil (Del)", command=self.delete_selected)
-                context_menu.add_command(label="✏️ Yeniden Adlandır (F2)", command=self.rename_selected)
+                context_menu.add_command(label=t('context_menu.delete'), command=self.delete_selected)
+                context_menu.add_command(label=t('context_menu.rename'), command=self.rename_selected)
                 context_menu.add_separator()
                 
                 # Tek dosya seçiliyse ek seçenekler
@@ -562,21 +596,21 @@ class FileOperations:
                     item_path = os.path.join(self.current_path, item_name)
                     
                     if os.path.isfile(item_path):
-                        context_menu.add_command(label="📊 Dosya Bilgileri", command=self.show_file_info)
-                        context_menu.add_command(label="🔄 Dosya Hash", command=self.show_file_hash)
+                        context_menu.add_command(label=t('context_menu.file_info'), command=self.show_file_info)
+                        context_menu.add_command(label=t('context_menu.file_hash'), command=self.show_file_hash)
                     
-                context_menu.add_command(label="📋 Özellikler", command=self.show_properties)
+                context_menu.add_command(label=t('context_menu.properties'), command=self.show_properties)
             else:
                 # Boş alan
-                context_menu.add_command(label="📁 Yapıştır (Ctrl+V)", command=self.paste_selected, 
-                                       state=tk.NORMAL if self.clipboard else tk.DISABLED)
+                context_menu.add_command(label=t('context_menu.paste'), command=self.paste_selected, 
+                                       state=tk.NORMAL if self.clipboard_data else tk.DISABLED)
                 context_menu.add_separator()
-                context_menu.add_command(label="➕ Yeni Klasör", command=self.create_folder)
-                context_menu.add_command(label="📄 Yeni Dosya", command=self.create_new_file)
+                context_menu.add_command(label=t('context_menu.new_folder'), command=self.create_folder)
+                context_menu.add_command(label=t('context_menu.new_file'), command=self.create_new_file)
                 context_menu.add_separator()
-                context_menu.add_command(label="🔄 Yenile (F5)", command=self.refresh_target)
+                context_menu.add_command(label=t('context_menu.refresh'), command=self.refresh_target)
                 context_menu.add_separator()
-                context_menu.add_command(label="📋 Klasör Özellikeri", command=self.show_folder_properties)
+                context_menu.add_command(label=t('context_menu.folder_properties'), command=self.show_folder_properties)
             
             # Menüyü göster
             context_menu.tk_popup(event.x_root, event.y_root)
@@ -630,207 +664,239 @@ class FileOperations:
     
     def copy_selected(self):
         """Seçili dosyaları kopyala"""
+        print("📋 COPY İŞLEMİ BAŞLADI")
+        
         items = self.get_selected_items()
         if not items:
+            print("❌ Hiçbir öğe seçilmemiş!")
             messagebox.showwarning("Uyarı", "Kopyalanacak dosya seçin!")
             return
         
-        self.clipboard_data = items
-        self.clipboard_operation = 'copy'  # ÇÖZELTİ: Operation türünü set et
+        print(f"📋 Seçilen öğeler: {items}")
+        
+        # Yeni clipboard format - her item için operation bilgisi
+        self.clipboard_data = [{'path': item, 'operation': 'copy'} for item in items]
         self.gui.status_var.set(f"{len(items)} öğe kopyalandı.")
+        
+        # Clipboard içeriğini kontrol et
+        for i, item in enumerate(self.clipboard_data):
+            if os.path.isdir(item['path']):
+                print(f"📁 Klasör {i+1}: {item['path']}")
+            else:
+                print(f"📄 Dosya {i+1}: {item['path']}")
+        
+        print(f"✅ {len(items)} öğe panoya kopyalandı")
     
     def cut_selected(self):
-        """Seçili dosyaları kes"""
+        """Seçili dosyaları kes - HIZLI VERSİYON"""
         items = self.get_selected_items()
         if not items:
             messagebox.showwarning("Uyarı", "Kesilecek dosya seçin!")
             return
         
-        self.clipboard_data = items
-        self.clipboard_operation = 'cut'  # ÇÖZELTİ: Operation türünü set et
-        self.gui.status_var.set(f"{len(items)} öğe kesildi.")
+        # Direkt kes - onay yok
+        self.clipboard_data = [{'path': item, 'operation': 'cut'} for item in items]
+        self.gui.status_var.set(f"✂️ {len(items)} öğe kesildi")
+        
+        # Kısa bilgi mesajı - sadece status bar'da
+        print(f"⚠️ {len(items)} dosya kesildi - güvenli yapıştırma aktif")
     
+    def _count_total_items_recursive(self, items):
+        """Klasörler içindeki tüm dosya ve klasörleri sayar"""
+        total_count = 0
+        
+        for item_data in items:
+            source_path = item_data['path']
+            
+            if os.path.isdir(source_path):
+                # Klasör ise içindeki tüm öğeleri say
+                try:
+                    for root, dirs, files in os.walk(source_path):
+                        total_count += len(dirs) + len(files)  # Alt klasörler + dosyalar
+                except (PermissionError, OSError):
+                    # Erişim hatası durumunda sadece ana klasörü say
+                    total_count += 1
+            else:
+                # Dosya ise direkt say
+                total_count += 1
+                
+        return total_count
+
     def paste_selected(self):
-        """Dosyaları yapıştır - İyileştirilmiş klasör birleştirme ile"""
+        """Seçili öğeleri yapıştır - gelişmiş kopyalama ile"""
+        print("🔄 PASTE İŞLEMİ BAŞLADI")
+        
         if not self.clipboard_data:
-            messagebox.showwarning("Uyarı", "Yapıştırılacak dosya yok!")
+            print("❌ Pano boş!")
+            messagebox.showwarning("Uyarı", "Pano boş - önce dosya kopyalayın veya kesin!")
             return
+            
+        print(f"📋 Pano içeriği: {len(self.clipboard_data)} öğe")
         
-        if not self.clipboard_operation:
-            messagebox.showwarning("Uyarı", "Clipboard işlem türü bilinmiyor!")
-            return
+        # Gerçek toplam öğe sayısını hesapla (klasör içlerini dahil ederek)
+        print("📊 Toplam öğe sayısı hesaplanıyor...")
+        total_items = self._count_total_items_recursive(self.clipboard_data)
+        print(f"📊 Toplam öğe sayısı: {total_items}")
         
-        print(f"📋 Yapıştırma işlemi başlıyor: {self.clipboard_operation}")
-        print(f"📋 {len(self.clipboard_data)} öğe yapıştırılacak")
+        # Progress dialog
+        if len(self.clipboard_data) > 1 or (len(self.clipboard_data) == 1 and os.path.isdir(self.clipboard_data[0]['path'])):
+            progress_dialog = self._create_progress_dialog("Yapıştırma İşlemi", "Dosyalar yapıştırılıyor...")
+            
+            processed_items = [0]  # List kullanarak reference passing
+            
+            def progress_callback(progress, current, total):
+                if progress_dialog and not progress_dialog.cancelled:
+                    progress_dialog.update_progress(progress, f"{current}/{total_items} öğe")
+                elif progress_dialog and progress_dialog.cancelled:
+                    raise Exception("İşlem kullanıcı tarafından iptal edildi")
+        else:
+            progress_dialog = None
+            progress_callback = None
+            processed_items = [0]
         
-        pasted_count = 0
-        for source_path in self.clipboard_data:
-            try:
-                filename = os.path.basename(source_path)
-                target_path = os.path.join(self.current_path, filename)
+        try:
+            self.gui.status_var.set("Yapıştırma işlemi başlatılıyor...")
+            
+            for item_data in self.clipboard_data:
+                if progress_dialog and progress_dialog.cancelled:
+                    break
+                    
+                source_path = item_data['path']
+                source_name = os.path.basename(source_path)
+                target_path = os.path.join(self.current_path, source_name)
                 
-                print(f"📋 İşleniyor: {filename}")
+                # Aynı konuma yapıştırma kontrolü - güvenli versiyon
+                try:
+                    same_location = os.path.samefile(os.path.dirname(source_path), self.current_path)
+                except (OSError, ValueError):
+                    # Farklı diskler veya hatalı path durumunda
+                    same_location = os.path.normpath(os.path.dirname(source_path)).lower() == os.path.normpath(self.current_path).lower()
                 
-                # Kaynak dosya var mı kontrol et
-                if not os.path.exists(source_path):
-                    print(f"❌ Kaynak dosya bulunamadı: {source_path}")
-                    continue
-                
-                # Aynı isimde dosya/klasör varsa kontrol et
-                if os.path.exists(target_path):
-                    if os.path.isdir(source_path) and os.path.isdir(target_path):
-                        # Klasör çakışması - birleştirme seçeneği sun
-                        action = self._ask_folder_merge_action(filename, target_path)
-                        
-                        if action == "merge":
-                            if self.clipboard_operation == 'copy':
-                                # Kopyalama için geçici klasör kullan
-                                temp_folder = f"{target_path}_temp"
-                                shutil.copytree(source_path, temp_folder)
-                                self._merge_folders_with_conflict_resolution(temp_folder, target_path)
-                            else:  # cut
-                                self._merge_folders_with_conflict_resolution(source_path, target_path)
-                            pasted_count += 1
-                            continue
-                        elif action == "cancel":
-                            print(f"❌ Yapıştırma iptal edildi: {filename}")
-                            continue
-                        elif action == "rename":
-                            # Numara ekleyerek yeni isim oluştur
-                            original_target = target_path
-                            counter = 1
-                            base_name = filename
-                            while os.path.exists(target_path):
-                                new_name = f"{base_name}_{counter}"
-                                target_path = os.path.join(self.current_path, new_name)
-                                counter += 1
-                            print(f"📋 Klasör adı değiştirildi: {os.path.basename(target_path)}")
-                    else:
-                        # Dosya çakışması - numara ekle
-                        original_target = target_path
+                if same_location:
+                    # Aynı konuma yapıştırma - kopyalama durumunda yeniden adlandır
+                    if item_data['operation'] == 'copy':
                         counter = 1
-                        base_name, ext = os.path.splitext(filename)
+                        name, ext = os.path.splitext(source_name)
                         while os.path.exists(target_path):
-                            new_name = f"{base_name}_{counter}{ext}"
+                            if os.path.isdir(source_path):
+                                new_name = f"{name} - Kopya ({counter})"
+                            else:
+                                new_name = f"{name} - Kopya ({counter}){ext}"
                             target_path = os.path.join(self.current_path, new_name)
                             counter += 1
-                        print(f"📋 Dosya adı değiştirildi: {os.path.basename(target_path)}")
-                
-                # İşlemi gerçekleştir
-                if self.clipboard_operation == 'copy':
-                    print(f"📄 Kopyalanıyor: {filename}")
-                    if os.path.isdir(source_path):
-                        shutil.copytree(source_path, target_path)
-                        print(f"✅ Klasör kopyalandı: {filename}")
                     else:
-                        shutil.copy2(source_path, target_path)
-                        print(f"✅ Dosya kopyalandı: {filename}")
-                        
-                elif self.clipboard_operation == 'cut':
-                    print(f"✂️ Taşınıyor: {filename}")
-                    
-                    # KLASÖR İÇERİK KONTROLÜ - Taşıma öncesi
-                    if os.path.isdir(source_path):
-                        source_files = []
-                        source_dirs = []
-                        try:
-                            for root, dirs, files in os.walk(source_path):
-                                source_files.extend(files)
-                                source_dirs.extend(dirs)
-                            print(f"📊 Kaynak klasör içeriği: {len(source_files)} dosya, {len(source_dirs)} alt klasör")
-                        except Exception as e:
-                            print(f"⚠️ Kaynak klasör analizi hatası: {e}")
-                    
-                    # Güvenli taşıma işlemi
-                    try:
-                        # ÇÖZELTİ: shutil.move() yerine güvenli taşıma
+                        # Taşıma durumunda skip
                         if os.path.isdir(source_path):
-                            print(f"📁 Klasör güvenli taşıma işlemi başlıyor...")
-                            
-                            # 1. Önce kopyala
-                            print(f"📄 1. Adım: Klasör kopyalanıyor...")
-                            shutil.copytree(source_path, target_path)
-                            
-                            # 2. Hedef klasör kontrolü
-                            if os.path.exists(target_path) and os.path.isdir(target_path):
-                                target_files = []
-                                target_dirs = []
-                                for root, dirs, files in os.walk(target_path):
-                                    target_files.extend(files)
-                                    target_dirs.extend(dirs)
-                                print(f"📊 Kopyalama sonrası hedef: {len(target_files)} dosya, {len(target_dirs)} alt klasör")
-                                
-                                # 3. İçerik doğrulaması
-                                if 'source_files' in locals() and 'source_dirs' in locals():
-                                    if len(target_files) == len(source_files) and len(target_dirs) == len(source_dirs):
-                                        print(f"✅ Kopyalama doğrulandı, kaynak klasör siliniyor...")
-                                        # 4. Kaynak klasörü sil
-                                        shutil.rmtree(source_path)
-                                        print(f"✅ Güvenli taşıma tamamlandı: {filename}")
-                                    else:
-                                        print(f"❌ Kopyalama doğrulanamadı! Kaynak klasör silinmedi.")
-                                        print(f"   Kaynak: {len(source_files)} dosya, {len(source_dirs)} alt klasör")
-                                        print(f"   Hedef:  {len(target_files)} dosya, {len(target_dirs)} alt klasör")
-                                        raise Exception("Klasör içeriği eşleşmiyor - güvenlik nedeniyle taşıma durduruldu")
-                                else:
-                                    print(f"⚠️ Kaynak analizi eksik, normal silme işlemi yapılıyor...")
-                                    shutil.rmtree(source_path)
-                            else:
-                                raise Exception(f"Hedef klasör oluşturulamadı: {target_path}")
-                        else:
-                            # Normal dosya için standart move
-                            shutil.move(source_path, target_path)
-                            print(f"✅ Dosya taşındı: {filename}")
-                        
-                        print(f"✅ Taşıma tamamlandı: {filename}")
-                        
-                        # KLASÖR İÇERİK KONTROLÜ - Taşıma sonrası  
-                        if os.path.isdir(target_path):
-                            target_files = []
-                            target_dirs = []
+                            # Klasör ise içindeki öğe sayısını processed_items'a ekle
                             try:
-                                for root, dirs, files in os.walk(target_path):
-                                    target_files.extend(files)
-                                    target_dirs.extend(dirs)
-                                print(f"📊 Final hedef klasör içeriği: {len(target_files)} dosya, {len(target_dirs)} alt klasör")
-                                
-                                # Final içerik karşılaştırması
-                                if 'source_files' in locals() and 'source_dirs' in locals():
-                                    if len(target_files) != len(source_files) or len(target_dirs) != len(source_dirs):
-                                        print(f"⚠️ UYARI: Final klasör içeriği eşleşmiyor!")
-                                        print(f"   Beklenen: {len(source_files)} dosya, {len(source_dirs)} alt klasör")
-                                        print(f"   Gerçek:   {len(target_files)} dosya, {len(target_dirs)} alt klasör")
+                                for root, dirs, files in os.walk(source_path):
+                                    processed_items[0] += len(dirs) + len(files)
+                            except:
+                                processed_items[0] += 1
+                        else:
+                            processed_items[0] += 1
+                        continue
+                
+                try:
+                    # ÖĞRENMESİ: Cut işleminden önce öğren (dosya henüz mevcut)
+                    if item_data['operation'] == 'cut' and os.path.isfile(source_path):
+                        print(f"🎓 PASTE ÖĞRENME: Cut-paste işleminden öğrenme başlatılıyor")
+                        print(f"🔍 DEBUG: source_path={source_path}, target_path={target_path}, current_path={self.current_path}")
+                        self.detect_category_move_for_file(source_path, self.current_path)
+                        print(f"🎓 PASTE ÖĞRENME TAMAMLANDI")
+                    
+                    if os.path.isdir(source_path):
+                        # Klasör işlemi - gelişmiş progress callback ile
+                        def folder_progress_callback(progress, current, total):
+                            processed_items[0] = current
+                            if progress_callback:
+                                overall_progress = (processed_items[0] / total_items) * 100
+                                progress_callback(overall_progress, processed_items[0], total_items)
+                        
+                        if item_data['operation'] == 'copy':
+                            success, message = self.copy_folder_parallel(source_path, target_path, max_workers=4, progress_callback=folder_progress_callback)
+                        else:  # cut/move
+                            success, message = self.copy_folder_parallel(source_path, target_path, max_workers=4, progress_callback=folder_progress_callback)
+                            if success:
+                                # GÜVENLİK KONTROLÜ: Hedef klasörün gerçekten oluştuğunu doğrula
+                                if os.path.exists(target_path) and os.path.isdir(target_path):
+                                    # Klasör içeriğini karşılaştır
+                                    source_files = set(os.listdir(source_path)) if os.path.exists(source_path) else set()
+                                    target_files = set(os.listdir(target_path)) if os.path.exists(target_path) else set()
+                                    
+                                    # Kritik dosyalar kopyalandı mı kontrol et
+                                    if len(source_files) > 0 and len(target_files) >= len(source_files) * 0.9:  # %90 dosya kopyalandıysa
+                                        try:
+                                            import shutil
+                                            shutil.rmtree(source_path)
+                                        except Exception as e:
+                                            print(f"Uyarı: Kaynak klasör silinemedi ama kopyalama başarılı: {e}")
                                     else:
-                                        print(f"✅ Klasör içeriği final doğrulaması: Tüm dosyalar başarıyla taşındı")
-                            except Exception as e:
-                                print(f"⚠️ Final klasör analizi hatası: {e}")
-                                
-                    except Exception as move_error:
-                        print(f"❌ Taşıma hatası: {move_error}")
-                        raise move_error
+                                        print(f"Güvenlik nedeniyle kaynak klasör silinmedi. Kopyalama eksik görünüyor.")
+                                        success = False
+                                else:
+                                    print("Hata: Hedef klasör oluşturulamadı, kaynak klasör silinmedi!")
+                                    success = False
+                    else:
+                        # Dosya işlemi
+                        def file_progress_callback(progress, bytes_done, file_total):
+                            if progress >= 100:
+                                processed_items[0] += 1
+                                if progress_callback:
+                                    overall_progress = (processed_items[0] / total_items) * 100
+                                    progress_callback(overall_progress, processed_items[0], total_items)
+                        
+                        if item_data['operation'] == 'copy':
+                            success, message = self.copy_file_optimized(source_path, target_path, file_progress_callback)
+                        else:  # cut/move
+                            success, message = self.copy_file_optimized(source_path, target_path, file_progress_callback)
+                            if success:
+                                # GÜVENLİK KONTROLÜ: Hedef dosyanın gerçekten oluştuğunu ve doğru boyutta olduğunu doğrula
+                                if os.path.exists(target_path) and os.path.isfile(target_path):
+                                    try:
+                                        source_size = os.path.getsize(source_path)
+                                        target_size = os.path.getsize(target_path)
+                                        
+                                        # Dosya boyutları eşleşiyorsa sil
+                                        if source_size == target_size:
+                                            os.remove(source_path)
+                                        else:
+                                            print(f"Hata: Dosya boyutları eşleşmiyor! Kaynak: {source_size}, Hedef: {target_size}. Güvenlik nedeniyle kaynak dosya silinmedi.")
+                                            success = False
+                                    except Exception as e:
+                                        print(f"Uyarı: Kaynak dosya silinemedi ama kopyalama başarılı: {e}")
+                                else:
+                                    print("Hata: Hedef dosya oluşturulamadı, kaynak dosya silinmedi!")
+                                    success = False
+                    
+                    if not success:
+                        print(f"Hata: {source_name}: {message}")
+                        
+                except Exception as e:
+                    print(f"Hata: {source_name}: {str(e)}")
+            
+            # Taşıma işleminde clipboard'u temizle
+            if self.clipboard_data and self.clipboard_data[0]['operation'] == 'cut':
+                self.clipboard_data = []
+            
+            if progress_dialog:
+                if hasattr(progress_dialog, 'cancelled') and progress_dialog.cancelled:
+                    progress_dialog.set_error("İşlem iptal edildi")
+                else:
+                    progress_dialog.set_completed(f"{processed_items[0]} öğe yapıştırıldı")
+            
+            self.refresh_target()
+            
+            if not progress_dialog or not (hasattr(progress_dialog, 'cancelled') and progress_dialog.cancelled):
+                self.gui.status_var.set(f"{processed_items[0]} öğe başarıyla yapıştırıldı")
                 
-                pasted_count += 1
-                
-            except Exception as e:
-                error_msg = f"'{os.path.basename(source_path)}' yapıştırılamadı: {e}"
-                print(f"❌ {error_msg}")
+        except Exception as e:
+            error_msg = f"Yapıştırma hatası: {str(e)}"
+            if progress_dialog and hasattr(progress_dialog, 'set_error'):
+                progress_dialog.set_error(error_msg)
+            else:
                 messagebox.showerror("Hata", error_msg)
-        
-        # Cut işlemi sonrası clipboard'ı temizle
-        if self.clipboard_operation == 'cut':
-            print("🗑️ Cut işlemi tamamlandı, clipboard temizleniyor")
-            self.clipboard_data = []
-            self.clipboard_operation = None
-        
-        if pasted_count > 0:
-            success_msg = f"{pasted_count} öğe yapıştırıldı."
-            print(f"✅ {success_msg}")
-            self.gui.status_var.set(success_msg)
-            self.refresh_target(add_to_history=False)
-        else:
-            error_msg = "Hiçbir öğe yapıştırılamadı!"
-            print(f"❌ {error_msg}")
-            self.gui.status_var.set(error_msg)
+                print(f"Yapıştırma hatası: {e}")
     
     def create_folder(self):
         """Yeni klasör oluştur"""
@@ -897,11 +963,11 @@ class FileOperations:
         """Dosya özelliklerini göster"""
         items = self.get_selected_items()
         if not items:
-            messagebox.showwarning("Uyarı", "Özelliklerini görmek istediğiniz dosyayı seçin!")
+            messagebox.showwarning(t('dialogs.warning.title'), t('messages.select_file_for_properties'))
             return
         
         if len(items) > 1:
-            messagebox.showwarning("Uyarı", "Tek dosya seçin!")
+            messagebox.showwarning(t('dialogs.warning.title'), t('messages.select_single_file'))
             return
         
         file_path = items[0]
@@ -909,20 +975,22 @@ class FileOperations:
             stat = os.stat(file_path)
             import time
             
-            properties = f"""Dosya Özellikleri:
+            file_type = t('properties.folder') if os.path.isdir(file_path) else t('properties.file')
             
-Adı: {os.path.basename(file_path)}
-Yol: {file_path}
-Boyut: {self.format_size(stat.st_size)}
-Oluşturulma: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_ctime))}
-Değiştirilme: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_mtime))}
-Erişim: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_atime))}
-Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
+            properties = f"""{t('properties.title')}:
+            
+{t('properties.name')}: {os.path.basename(file_path)}
+{t('properties.path')}: {file_path}
+{t('properties.size')}: {self.format_size(stat.st_size)}
+{t('properties.created')}: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_ctime))}
+{t('properties.modified')}: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_mtime))}
+{t('properties.accessed')}: {time.strftime("%d.%m.%Y %H:%M:%S", time.localtime(stat.st_atime))}
+{t('properties.type')}: {file_type}
 """
             
-            messagebox.showinfo("Özellikler", properties)
+            messagebox.showinfo(t('properties.title'), properties)
         except Exception as e:
-            messagebox.showerror("Hata", f"Özellikler alınırken hata: {e}")
+            messagebox.showerror(t('dialogs.error.title'), t('messages.properties_error', error=str(e)))
     
     def get_file_hash(self, file_path):
         """Dosya hash'ini hesapla - Ana programdan alındı"""
@@ -943,36 +1011,270 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
         except (IOError, OSError):
             return True
     
-    def copy_file_optimized(self, source_path, target_path):
-        """Optimize edilmiş dosya kopyalama"""
+    def copy_file_optimized(self, source_path, target_path, progress_callback=None):
+        """Gelişmiş ve güvenli dosya kopyalama"""
         try:
             # Dosya kilitli mi kontrol et
             if self.is_file_locked(source_path):
                 return False, "Dosya kullanımda"
             
-            # Büyük dosyalar için chunk-based kopyalama
+            # Dosya boyutunu al
             file_size = os.path.getsize(source_path)
-            if file_size > 50 * 1024 * 1024:  # 50MB'dan büyükse
-                return self.copy_file_chunked(source_path, target_path)
+            
+            # Hash verification için kaynak dosyanın hash'ini hesapla
+            source_hash = self._calculate_file_hash(source_path)
+            
+            # Büyük dosyalar için gelişmiş kopyalama
+            if file_size > 10 * 1024 * 1024:  # 10MB'dan büyükse
+                success, message = self.copy_file_advanced(
+                    source_path, target_path, file_size, source_hash, progress_callback
+                )
             else:
-                shutil.copy2(source_path, target_path)
-                return True, "Başarılı"
+                # Küçük dosyalar için hızlı kopyalama
+                success, message = self.copy_file_fast(
+                    source_path, target_path, source_hash
+                )
+            
+            return success, message
+            
         except Exception as e:
-            return False, str(e)
-    
-    def copy_file_chunked(self, source_path, target_path):
-        """Chunk-based dosya kopyalama"""
+            return False, f"Kopyalama hatası: {str(e)}"
+
+    def copy_file_advanced(self, source_path, target_path, file_size, source_hash, progress_callback=None):
+        """Gelişmiş büyük dosya kopyalama - Hash verification, Resume, Progress"""
         try:
-            chunk_size = 1024 * 1024  # 1MB chunks
-            with open(source_path, 'rb') as src, open(target_path, 'wb') as dst:
-                while True:
-                    chunk = src.read(chunk_size)
+            # Geçici dosya adı
+            temp_target = target_path + ".tmp"
+            
+            # Resume capability - kısmi kopyalama var mı kontrol et
+            start_position = 0
+            if os.path.exists(temp_target):
+                try:
+                    start_position = os.path.getsize(temp_target)
+                    if start_position >= file_size:
+                        # Dosya zaten tamamen kopyalanmış, hash kontrol et
+                        if self._verify_file_integrity(temp_target, source_hash):
+                            os.rename(temp_target, target_path)
+                            return True, "Dosya zaten kopyalanmış"
+                        else:
+                            # Hash uyuşmuyor, baştan kopyala
+                            os.remove(temp_target)
+                            start_position = 0
+                except (OSError, PermissionError):
+                    # Temp dosya silinemiyor, yeni isim dene
+                    import random
+                    temp_target = target_path + f".tmp{random.randint(1000,9999)}"
+                    start_position = 0
+            
+            # Adaptive chunk size - dosya boyutuna göre ayarla
+            chunk_size = self._calculate_optimal_chunk_size(file_size)
+            
+            # Kopyalama işlemi
+            bytes_copied = start_position
+            
+            with open(source_path, 'rb') as src, open(temp_target, 'ab' if start_position > 0 else 'wb') as dst:
+                # Resume için başlangıç pozisyonuna git
+                if start_position > 0:
+                    src.seek(start_position)
+                
+                while bytes_copied < file_size:
+                    # Dinamik chunk size - kalan boyuta göre ayarla
+                    remaining = file_size - bytes_copied
+                    current_chunk_size = min(chunk_size, remaining)
+                    
+                    chunk = src.read(current_chunk_size)
                     if not chunk:
                         break
+                    
                     dst.write(chunk)
-            return True, "Başarılı"
+                    dst.flush()  # Disk'e hemen yaz
+                    os.fsync(dst.fileno())  # Sistem buffer'ını boşalt
+                    
+                    bytes_copied += len(chunk)
+                    
+                    # Progress callback
+                    if progress_callback:
+                        progress = (bytes_copied / file_size) * 100
+                        progress_callback(progress, bytes_copied, file_size)
+            
+            # Hash verification - kopyalanan dosya doğru mu?
+            if not self._verify_file_integrity(temp_target, source_hash):
+                os.remove(temp_target)
+                return False, "Hash verification failed - dosya bozuk"
+            
+            # Metadata kopyalama (timestamps, permissions)
+            self._copy_metadata(source_path, temp_target)
+            
+            # Atomic rename - son adımda dosyayı gerçek adına çevir
+            backup_path = None  # Başlangıçta None olarak tanımla
+            try:
+                # Hedef dosya varsa önce yedekle
+                if os.path.exists(target_path):
+                    backup_path = target_path + ".backup"
+                    if os.path.exists(backup_path):
+                        os.remove(backup_path)
+                    os.rename(target_path, backup_path)
+                
+                os.rename(temp_target, target_path)
+                
+                # Başarılıysa backup'ı sil
+                if backup_path and os.path.exists(backup_path):
+                    os.remove(backup_path)
+                    
+            except Exception as e:
+                # Rename başarısız, backup'ı geri yükle
+                if backup_path and os.path.exists(backup_path):
+                    try:
+                        if os.path.exists(target_path):
+                            os.remove(target_path)
+                        os.rename(backup_path, target_path)
+                    except:
+                        pass
+                raise e
+            
+            return True, "Güvenli kopyalama tamamlandı"
+            
         except Exception as e:
-            return False, str(e)
+            # Cleanup
+            if os.path.exists(temp_target):
+                try:
+                    os.remove(temp_target)
+                except:
+                    pass
+            return False, f"Gelişmiş kopyalama hatası: {str(e)}"
+
+    def copy_file_fast(self, source_path, target_path, source_hash):
+        """Küçük dosyalar için hızlı kopyalama"""
+        try:
+            # Memory mapping ile hızlı kopyalama
+            import mmap
+            
+            with open(source_path, 'rb') as src:
+                with mmap.mmap(src.fileno(), 0, access=mmap.ACCESS_READ) as mmapped_src:
+                    with open(target_path, 'wb') as dst:
+                        dst.write(mmapped_src)
+                        dst.flush()
+                        os.fsync(dst.fileno())
+            
+            # Hash verification
+            if not self._verify_file_integrity(target_path, source_hash):
+                os.remove(target_path)
+                return False, "Hash verification failed"
+            
+            # Metadata kopyalama
+            self._copy_metadata(source_path, target_path)
+            
+            return True, "Hızlı kopyalama tamamlandı"
+            
+        except Exception as e:
+            # Fallback to standard copy
+            try:
+                shutil.copy2(source_path, target_path)
+                if self._verify_file_integrity(target_path, source_hash):
+                    return True, "Standart kopyalama tamamlandı"
+                else:
+                    os.remove(target_path)
+                    return False, "Hash verification failed"
+            except Exception as e2:
+                return False, f"Hızlı kopyalama hatası: {str(e2)}"
+
+    def _calculate_optimal_chunk_size(self, file_size):
+        """Dosya boyutuna göre optimal chunk size hesapla"""
+        if file_size < 100 * 1024 * 1024:  # 100MB'dan küçük
+            return 1024 * 1024  # 1MB
+        elif file_size < 1024 * 1024 * 1024:  # 1GB'dan küçük
+            return 4 * 1024 * 1024  # 4MB
+        else:  # 1GB'dan büyük
+            return 8 * 1024 * 1024  # 8MB
+
+    def _verify_file_integrity(self, file_path, expected_hash):
+        """Dosya bütünlüğünü hash ile doğrula"""
+        try:
+            actual_hash = self._calculate_file_hash(file_path)
+            return actual_hash == expected_hash
+        except:
+            return False
+
+    def _copy_metadata(self, source_path, target_path):
+        """Dosya metadata'sını kopyala (timestamps, permissions)"""
+        try:
+            stat = os.stat(source_path)
+            os.utime(target_path, (stat.st_atime, stat.st_mtime))
+            if hasattr(os, 'chmod'):
+                os.chmod(target_path, stat.st_mode)
+        except:
+            pass  # Metadata kopyalama başarısız olsa da dosya kopyalama devam eder
+
+    def copy_file_chunked(self, source_path, target_path):
+        """Eski chunk-based kopyalama - geriye uyumluluk için"""
+        return self.copy_file_optimized(source_path, target_path)
+
+    def copy_folder_parallel(self, source_folder, target_folder, max_workers=4, progress_callback=None):
+        """Paralel klasör kopyalama - çoklu thread ile"""
+        import concurrent.futures
+        import threading
+        
+        try:
+            # Tüm dosyaları listele
+            all_files = []
+            
+            for root, dirs, files in os.walk(source_folder):
+                for file in files:
+                    source_file = os.path.join(root, file)
+                    rel_path = os.path.relpath(source_file, source_folder)
+                    target_file = os.path.join(target_folder, rel_path)
+                    
+                    # Hedef klasörü oluştur
+                    os.makedirs(os.path.dirname(target_file), exist_ok=True)
+                    
+                    file_size = os.path.getsize(source_file)
+                    all_files.append((source_file, target_file, file_size))
+            
+            # Progress tracking
+            copied_files = 0
+            lock = threading.Lock()
+            
+            def file_progress_callback(progress, bytes_done, file_total):
+                nonlocal copied_files
+                with lock:
+                    # Dosya tamamlandığında sayacı artır
+                    if progress >= 100:
+                        copied_files += 1
+                        # Üst seviye progress callback'i çağır
+                        if progress_callback:
+                            progress_callback(0, copied_files, len(all_files))
+            
+            def copy_single_file(file_info):
+                source_file, target_file, file_size = file_info
+                return self.copy_file_optimized(source_file, target_file, file_progress_callback)
+            
+            # Paralel kopyalama
+            failed_files = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_file = {executor.submit(copy_single_file, file_info): file_info 
+                                for file_info in all_files}
+                
+                for future in concurrent.futures.as_completed(future_to_file):
+                    file_info = future_to_file[future]
+                    try:
+                        success, message = future.result()
+                        if not success:
+                            failed_files.append((file_info[0], message))
+                    except Exception as e:
+                        failed_files.append((file_info[0], str(e)))
+            
+            if failed_files:
+                error_msg = f"{len(failed_files)} dosya kopyalanamadı:\n"
+                for file_path, error in failed_files[:5]:  # İlk 5 hatayı göster
+                    error_msg += f"• {os.path.basename(file_path)}: {error}\n"
+                if len(failed_files) > 5:
+                    error_msg += f"... ve {len(failed_files) - 5} dosya daha"
+                return False, error_msg
+            
+            return True, f"{len(all_files)} dosya başarıyla kopyalandı"
+            
+        except Exception as e:
+            return False, f"Paralel kopyalama hatası: {str(e)}"
     
     def load_settings(self):
         """Ayarları yükle"""
@@ -1111,6 +1413,7 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
             self.gui.status_var.set(f"'{source_name}' başarıyla taşındı.")
             
             # DİNAMİK ÖĞRENMESİ: Klasör taşıması sonrası kategori öğrenme
+            target_path = os.path.join(target_folder, source_name)
             if os.path.isdir(target_path) and target_path != source_path:
                 self.detect_category_move(target_path, target_folder)
                 
@@ -1208,33 +1511,64 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
         return result["choice"]
     
     def _move_complete_folder(self, source_path, target_folder):
-        """Klasörü komple taşı (yapıyı koru) - İyileştirilmiş versiyon"""
-        folder_name = os.path.basename(source_path)
-        target_path = os.path.join(target_folder, folder_name)
-        
-        # Aynı isimde klasör varsa kullanıcıya sor
-        if os.path.exists(target_path) and os.path.isdir(target_path):
-            action = self._ask_folder_merge_action(folder_name, target_path)
+        """Klasörü komple taşı - gelişmiş kopyalama ile"""
+        try:
+            target_path = os.path.join(target_folder, os.path.basename(source_path))
             
-            if action == "merge":
-                # Klasör içeriklerini birleştir
-                print(f"🔄 Klasör içerikleri birleştiriliyor: {folder_name}")
-                self._merge_folders_with_conflict_resolution(source_path, target_path)
-                return
-            elif action == "cancel":
-                print(f"❌ Klasör taşıma iptal edildi: {folder_name}")
-                return
-            elif action == "rename":
-                # Numara ekleyerek yeni isim oluştur
-                counter = 1
-                base_target = target_path
-                while os.path.exists(target_path):
-                    target_path = f"{base_target}_{counter}"
-                    counter += 1
-        
-        # Klasörü taşı
-        shutil.move(source_path, target_path)
-        print(f"📁 Klasör komple taşındı: {source_path} -> {target_path}")
+            if os.path.exists(target_path):
+                # Hedefte aynı isimde klasör var
+                action = self._ask_folder_merge_action(os.path.basename(source_path), target_path)
+                if action == "cancel":
+                    return
+                elif action == "merge":
+                    self._merge_folders_with_conflict_resolution(source_path, target_path)
+                    return
+                elif action == "rename":
+                    counter = 1
+                    base_name = os.path.basename(source_path)
+                    while os.path.exists(target_path):
+                        new_name = f"{base_name} ({counter})"
+                        target_path = os.path.join(target_folder, new_name)
+                        counter += 1
+            
+            # Progress dialog göster
+            progress_dialog = self._create_progress_dialog("Klasör Taşınıyor", f"'{os.path.basename(source_path)}' taşınıyor...")
+            
+            def progress_callback(progress, current, total):
+                if not progress_dialog.cancelled:
+                    progress_dialog.update_progress(progress, f"{current}/{total} dosya")
+                else:
+                    # İptal edildi, işlemi durdur
+                    raise Exception("İşlem kullanıcı tarafından iptal edildi")
+            
+            try:
+                # Gelişmiş paralel kopyalama kullan
+                success, message = self.copy_folder_parallel(source_path, target_path, max_workers=4, progress_callback=progress_callback)
+                
+                if success and not progress_dialog.cancelled:
+                    # Kopyalama başarılı, kaynak klasörü sil
+                    import shutil
+                    shutil.rmtree(source_path)
+                    progress_dialog.set_completed("Klasör başarıyla taşındı")
+                elif progress_dialog.cancelled:
+                    # İptal edildi, kopyalanmış dosyaları temizle
+                    if os.path.exists(target_path):
+                        shutil.rmtree(target_path)
+                    progress_dialog.set_error("İşlem iptal edildi")
+                else:
+                    progress_dialog.set_error(f"Taşıma hatası: {message}")
+                    
+            except Exception as e:
+                progress_dialog.set_error(f"Taşıma hatası: {str(e)}")
+                # Cleanup
+                if os.path.exists(target_path):
+                    try:
+                        shutil.rmtree(target_path)
+                    except:
+                        pass
+            
+        except Exception as e:
+            messagebox.showerror("Hata", f"Klasör taşıma hatası: {e}")
     
     def _ask_folder_merge_action(self, folder_name, target_path):
         """Aynı isimde klasör varsa kullanıcıya ne yapacağını sor"""
@@ -1512,19 +1846,80 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
         return result["action"]
     
     def _move_single_file(self, source_path, target_folder):
-        """Tek dosyayı taşı"""
-        file_name = os.path.basename(source_path)
-        new_path = os.path.join(target_folder, file_name)
-        
-        # Aynı isimde dosya varsa numara ekle
-        counter = 1
-        base_name, ext = os.path.splitext(file_name)
-        while os.path.exists(new_path):
-            new_name = f"{base_name}_{counter}{ext}"
-            new_path = os.path.join(target_folder, new_name)
-            counter += 1
-        
-        shutil.move(source_path, new_path)
+        """Tek dosya taşıma - gelişmiş kopyalama ile"""
+        try:
+            filename = os.path.basename(source_path)
+            target_path = os.path.join(target_folder, filename)
+            
+            # Duplikat kontrolü
+            if os.path.exists(target_path):
+                if self._files_are_identical(source_path, target_path):
+                    # Aynı dosya, kaynak dosyayı sil
+                    os.remove(source_path)
+                    return
+                else:
+                    # Farklı dosya, kullanıcıya sor
+                    action = self._ask_file_conflict_resolution(filename, source_path, target_path)
+                    if action == "skip":
+                        return
+                    elif action == "rename":
+                        counter = 1
+                        name, ext = os.path.splitext(filename)
+                        while os.path.exists(target_path):
+                            new_filename = f"{name} ({counter}){ext}"
+                            target_path = os.path.join(target_folder, new_filename)
+                            counter += 1
+            
+            # Progress dialog - küçük dosyalar için basit
+            file_size = os.path.getsize(source_path)
+            if file_size > 50 * 1024 * 1024:  # 50MB'dan büyük dosyalar için progress göster
+                progress_dialog = self._create_progress_dialog("Dosya Taşınıyor", f"'{filename}' taşınıyor...")
+                
+                def progress_callback(progress, bytes_done, file_total):
+                    if not progress_dialog.cancelled:
+                        progress_dialog.update_progress(progress, f"{self.format_size(bytes_done)}/{self.format_size(file_total)}")
+                    else:
+                        raise Exception("İşlem kullanıcı tarafından iptal edildi")
+                
+                try:
+                    # Gelişmiş kopyalama
+                    success, message = self.copy_file_optimized(source_path, target_path, progress_callback)
+                    
+                    if success and not progress_dialog.cancelled:
+                        os.remove(source_path)  # Kaynak dosyayı sil
+                        progress_dialog.set_completed("Dosya başarıyla taşındı")
+                    elif progress_dialog.cancelled:
+                        if os.path.exists(target_path):
+                            os.remove(target_path)
+                        progress_dialog.set_error("İşlem iptal edildi")
+                    else:
+                        progress_dialog.set_error(f"Taşıma hatası: {message}")
+                        
+                except Exception as e:
+                    progress_dialog.set_error(f"Taşıma hatası: {str(e)}")
+                    if os.path.exists(target_path):
+                        try:
+                            os.remove(target_path)
+                        except:
+                            pass
+            else:
+                # Küçük dosyalar için basit kopyalama
+                success, message = self.copy_file_optimized(source_path, target_path)
+                if success:
+                    os.remove(source_path)
+                else:
+                    raise Exception(message)
+            
+            # ÖĞRENMESİ: Dosya taşıma işleminden öğren
+            file_extension = os.path.splitext(source_path)[1].lower()
+            if file_extension:
+                print(f"🎓 DOSYA TAŞIMA ÖĞRENME: {file_extension} -> {target_folder}")
+                print(f"🔍 DEBUG: source_path={source_path}, target_folder={target_folder}")
+                self.detect_category_move_for_file(source_path, target_folder)
+                print(f"🎓 DOSYA TAŞIMA ÖĞRENME TAMAMLANDI")
+                    
+        except Exception as e:
+            messagebox.showerror("Hata", f"Dosya taşıma hatası: {e}")
     
     def _move_folder_with_categorization(self, source_folder, target_folder):
         """Klasörü kategorilere göre organize ederek taşı"""
@@ -1942,34 +2337,87 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
         return None
     
     def _files_are_identical(self, file1, file2):
-        """İki dosyanın içeriği aynı mı kontrol et"""
+        """İki dosyanın içeriği aynı mı kontrol et - Optimize edilmiş"""
         try:
-            # Hızlı boyut kontrolü
-            if os.path.getsize(file1) != os.path.getsize(file2):
+            # 1. Hızlı boyut kontrolü
+            size1 = os.path.getsize(file1)
+            size2 = os.path.getsize(file2)
+            
+            if size1 != size2:
                 return False
             
-            # Hash karşılaştırması
-            hash1 = self._calculate_file_hash(file1)
-            hash2 = self._calculate_file_hash(file2)
+            # 2. Küçük dosyalar için direkt hash karşılaştırması (1MB altı)
+            if size1 < 1024 * 1024:  # 1MB
+                hash1 = self._calculate_file_hash(file1)
+                hash2 = self._calculate_file_hash(file2)
+                return hash1 == hash2 and hash1 is not None
             
-            return hash1 == hash2 and hash1 is not None
-        
+            # 3. Büyük dosyalar için önce değişiklik tarihi kontrolü
+            stat1 = os.stat(file1)
+            stat2 = os.stat(file2)
+            
+            # Eğer boyutlar aynı ama değişiklik tarihleri farklıysa muhtemelen farklı dosyalar
+            if abs(stat1.st_mtime - stat2.st_mtime) > 1:  # 1 saniye tolerans
+                # Yine de emin olmak için hash kontrolü yap (ama sadece başlangıç)
+                return self._quick_hash_check(file1, file2)
+            
+            # 4. Büyük dosyalar için kısmi hash kontrolü (ilk ve son 64KB)
+            return self._partial_hash_check(file1, file2, size1)
+            
         except Exception as e:
             print(f"❌ Dosya karşılaştırma hatası: {e}")
             return False
-    
-    def _calculate_file_hash(self, file_path, chunk_size=8192):
-        """Dosya hash'ini hesapla"""
+
+    def _quick_hash_check(self, file1, file2, chunk_size=65536):
+        """Hızlı hash kontrolü - sadece ilk 64KB'yi kontrol et"""
         try:
-            import hashlib
-            hash_md5 = hashlib.md5()
-            with open(file_path, "rb") as f:
-                for chunk in iter(lambda: f.read(chunk_size), b""):
-                    hash_md5.update(chunk)
-            return hash_md5.hexdigest()
+            with open(file1, "rb") as f1, open(file2, "rb") as f2:
+                chunk1 = f1.read(chunk_size)
+                chunk2 = f2.read(chunk_size)
+                return chunk1 == chunk2
+        except Exception:
+            return False
+
+    def _partial_hash_check(self, file1, file2, file_size, chunk_size=65536):
+        """Kısmi hash kontrolü - başlangıç, orta ve son kısımları kontrol et"""
+        try:
+            with open(file1, "rb") as f1, open(file2, "rb") as f2:
+                # İlk 64KB
+                chunk1_start = f1.read(chunk_size)
+                chunk2_start = f2.read(chunk_size)
+                
+                if chunk1_start != chunk2_start:
+                    return False
+                
+                # Dosya yeterince büyükse ortayı da kontrol et
+                if file_size > chunk_size * 3:
+                    mid_pos = file_size // 2
+                    f1.seek(mid_pos)
+                    f2.seek(mid_pos)
+                    
+                    chunk1_mid = f1.read(chunk_size)
+                    chunk2_mid = f2.read(chunk_size)
+                    
+                    if chunk1_mid != chunk2_mid:
+                        return False
+                
+                # Son 64KB (dosya yeterince büyükse)
+                if file_size > chunk_size * 2:
+                    f1.seek(-chunk_size, 2)  # Dosya sonundan 64KB geriye
+                    f2.seek(-chunk_size, 2)
+                    
+                    chunk1_end = f1.read(chunk_size)
+                    chunk2_end = f2.read(chunk_size)
+                    
+                    if chunk1_end != chunk2_end:
+                        return False
+                
+                # Tüm kontroller geçtiyse muhtemelen aynı dosya
+                return True
+                
         except Exception as e:
-            print(f"❌ Hash hesaplama hatası: {file_path} - {e}")
-            return None
+            print(f"❌ Kısmi hash kontrol hatası: {e}")
+            return False
     
     def _handle_duplicate_file(self, source_file, target_file):
         """Duplikat dosyayı işle"""
@@ -1994,12 +2442,13 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
             return True
         else:  # ask
             # Kullanıcıya sor
+            from lang_manager import lang_manager
             response = messagebox.askyesnocancel(
-                "Duplikat Dosya",
-                f"'{os.path.basename(source_file)}' dosyası zaten mevcut.\n\n"
-                "Evet: Numara ekleyerek taşı\n"
-                "Hayır: Atla\n"
-                "İptal: İşlemi durdur"
+                lang_manager.get_text('dialogs.duplicate_found.title'),
+                f"'{os.path.basename(source_file)}' {lang_manager.get_text('dialogs.file_conflict.message')}\n\n"
+                f"{lang_manager.get_text('buttons.ok')}: Numara ekleyerek taşı\n"
+                f"{lang_manager.get_text('dialogs.file_conflict.skip')}: {lang_manager.get_text('dialogs.file_conflict.skip')}\n"
+                f"{lang_manager.get_text('buttons.cancel')}: İşlemi durdur"
             )
             
             if response is True:  # Evet
@@ -2176,46 +2625,258 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
             if not folder_name:
                 folder_name = self.current_path
             
-            info_text = f"""📁 Klasör Özellikleri
+            info_text = f"""📁 {t('properties.folder_properties')}
 
-📂 Klasör Adı: {folder_name}
-📍 Tam Yol: {self.current_path}
-📊 Toplam Boyut: {self.format_size(total_size)}
-📄 Dosya Sayısı: {total_files}
-📁 Klasör Sayısı: {total_folders}
-📈 Toplam Öğe: {total_files + total_folders}"""
+📂 {t('properties.folder_name')}: {folder_name}
+📍 {t('properties.full_path')}: {self.current_path}
+📊 {t('properties.total_size')}: {self.format_size(total_size)}
+📄 {t('status.file_count')}: {total_files}
+📁 {t('status.folder_count')}: {total_folders}
+📈 {t('properties.total_items')}: {total_files + total_folders}"""
 
-            messagebox.showinfo("Klasör Özellikleri", info_text)
+            messagebox.showinfo(t('properties.folder_properties'), info_text)
             
         except Exception as e:
-            messagebox.showerror("Hata", f"Klasör bilgileri alınamadı: {e}") 
+            messagebox.showerror(t('dialogs.error.title'), t('messages.folder_info_error', error=str(e))) 
     
-    def load_learned_categories(self):
-        """Öğrenilen kategorileri yükle"""
+    def create_full_default_categories_json(self):
+        """DEFAULT kategori sistemindeki TÜM uzantıları tam JSON formatına çevir"""
         try:
-            settings_file = os.path.join(os.path.expanduser("~"), ".file_manager_learned_categories.json")
-            if os.path.exists(settings_file):
-                with open(settings_file, 'r', encoding='utf-8') as f:
-                    self.learned_categories = json.load(f)
-                print(f"📚 {len(self.learned_categories)} öğrenilen kategori yüklendi")
-            else:
-                self.learned_categories = {}
+            default_categories = self.get_file_categories()
+            learned_categories = {}
+            
+            # Tüm default kategorilerden uzantıları çıkar
+            for category_key, category_info in default_categories.items():
+                if category_key == 'other_files':  # Other files'ı atla
+                    continue
+                
+                # Bu kategorideki tüm uzantıları learned_categories'e ekle
+                for extension in category_info['extensions']:
+                    learned_categories[extension] = category_key
+            
+            print(f"🔧 FULL DEFAULT MAPPING: {len(learned_categories)} extensions mapped to categories")
+            return learned_categories
+            
         except Exception as e:
-            print(f"⚠️ Öğrenilen kategoriler yüklenemedi: {e}")
+            print(f"⚠️ Default JSON oluşturma hatası: {e}")
+            return {}
+
+    def load_learned_categories(self):
+        """KALıCı ÇÖZÜM: TARGET-BAZLI kategorileri yükle veya tam default JSON oluştur"""
+        try:
+            if not hasattr(self, 'target_path') or not self.target_path:
+                print("⚠️ Target path henüz set edilmemiş")
+                return
+            
+            # Target klasöründe JSON dosyası ara
+            target_json_path = os.path.join(self.target_path, 'learned_categories.json')
+            
+            if os.path.exists(target_json_path):
+                # MEVCUT JSON DOSYASINI YÜKLE
+                with open(target_json_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                
+                # Format kontrolü
+                if isinstance(data, dict) and 'learned_categories' in data:
+                    # Yeni detaylı format
+                    self.learned_categories = data.get('learned_categories', {})
+                    self.category_confidence = data.get('category_confidence', {})
+                    self.category_conflicts = data.get('category_conflicts', {})
+                    print(f"✅ EXISTING TARGET JSON: {len(self.learned_categories)} categories loaded")
+                else:
+                    # Basit format - sadece uzantı->kategori
+                    self.learned_categories = data
+                    self.category_confidence = {}
+                    self.category_conflicts = {}
+                    print(f"✅ EXISTING TARGET JSON: {len(self.learned_categories)} simple categories loaded")
+                
+                # DEFAULT SYNC: Default kategorilerle senkronize et
+                sync_updated = self._sync_with_default_categories()
+                if sync_updated:
+                    print(f"🔄 SYNC: Default kategorilerle senkronize edildi, JSON güncellenecek")
+                    self.save_learned_categories()
+                
+                self.gui.status_var.set(f"📚 Target learning: {len(self.learned_categories)} extensions")
+            else:
+                # JSON YOK - FULL DEFAULT SİSTEMDEN TAM JSON OLUŞTUR
+                print(f"📂 NO TARGET JSON: Creating complete default mapping for all extensions")
+                self.learned_categories = self.create_full_default_categories_json()
+                self.category_confidence = {}
+                self.category_conflicts = {}
+                
+                # Yeni oluşturulan tam JSON'ı kaydet
+                if self.learned_categories:
+                    self.save_learned_categories()
+                    print(f"✅ FULL DEFAULT MAPPING SAVED: {len(self.learned_categories)} extensions auto-mapped")
+                    self.gui.status_var.set(f"🚀 Auto-created: {len(self.learned_categories)} extension mappings")
+                else:
+                    print("⚠️ Default mapping creation failed")
+                    self.gui.status_var.set("⚠️ Default mapping failed")
+                
+        except Exception as e:
+            print(f"⚠️ Target learning load error: {e}")
             self.learned_categories = {}
+            self.category_confidence = {}
+            self.category_conflicts = {}
+            self.gui.status_var.set(f"⚠️ Learning error: {e}")
     
     def save_learned_categories(self):
-        """Öğrenilen kategorileri kaydet"""
+        """TARGET KLASÖR BAZLI öğrenme kaydet"""
         try:
-            settings_file = os.path.join(os.path.expanduser("~"), ".file_manager_learned_categories.json")
-            with open(settings_file, 'w', encoding='utf-8') as f:
-                json.dump(self.learned_categories, f, indent=2, ensure_ascii=False)
-            print(f"💾 {len(self.learned_categories)} öğrenilen kategori kaydedildi")
+            if not self.target_path:
+                return
+                
+            # Target klasöründe kaydet
+            target_json_path = os.path.join(self.target_path, 'learned_categories.json')
+            
+            # Tüm öğrenme verilerini birleştir
+            save_data = {
+                'learned_categories': self.learned_categories,
+                'category_confidence': getattr(self, 'category_confidence', {}),
+                'category_conflicts': getattr(self, 'category_conflicts', {}),
+                'target_path': self.target_path,
+                'last_updated': time.time(),
+                'version': '3.0',
+                'description': 'Target-specific learning for file categorization'
+            }
+            
+            # JSON formatını düzelt
+            formatted_data = {}
+            for ext, cat in save_data['learned_categories'].items():
+                if isinstance(cat, str):
+                    formatted_data[ext] = cat
+                elif isinstance(cat, dict):
+                    formatted_data[ext] = cat.get('category', '')
+            
+            save_data['learned_categories'] = formatted_data
+            
+            # JSON'ı kaydet
+            with open(target_json_path, 'w', encoding='utf-8') as f:
+                json.dump(save_data, f, indent=2, ensure_ascii=False)
+            
+            self.gui.status_var.set(f"Learned categories saved: {len(formatted_data)} extensions")
+            
         except Exception as e:
-            print(f"❌ Öğrenilen kategoriler kaydedilemedi: {e}")
+            self.gui.status_var.set(f"Save error: {e}")
+    
+    def _get_target_drive(self):
+        """Hedef klasörün drive'ını belirle"""
+        try:
+            if hasattr(self, 'target_path') and self.target_path:
+                # Windows için drive letter (C:, D:, etc.)
+                drive = os.path.splitdrive(self.target_path)[0]
+                if drive:
+                    return drive + os.sep  # C:\ formatında döndür
+                
+                # Linux/Mac için root path
+                return "/"
+            return None
+        except Exception as e:
+            print(f"⚠️ Drive belirleme hatası: {e}")
+            return None
+    
+    def _get_disk_info(self, drive_path):
+        """Disk bilgilerini al"""
+        try:
+            import shutil
+            if drive_path and os.path.exists(drive_path):
+                total, used, free = shutil.disk_usage(drive_path)
+                
+                # Disk etiketi almaya çalış (Windows)
+                label = "Bilinmiyor"
+                try:
+                    import win32api
+                    label = win32api.GetVolumeInformation(drive_path)[0] or "Etiket Yok"
+                except:
+                    # Windows API yoksa basit isim kullan
+                    label = f"Disk {drive_path}"
+                
+                return {
+                    'label': label,
+                    'drive_path': drive_path,
+                    'total_size': self.format_size(total),
+                    'free_size': self.format_size(free),
+                    'used_size': self.format_size(used)
+                }
+        except Exception as e:
+            print(f"⚠️ Disk bilgisi alınamadı: {e}")
+        
+        return {}
+    
+    def _analyze_existing_categories_on_disk(self):
+        """İlk kez kullanılan harddiskte mevcut kategori yapısını analiz et ve öğren"""
+        try:
+            if not hasattr(self, 'target_path') or not self.target_path:
+                return
+            
+            print(f"🔍 {self.target_path} diskinde mevcut kategori yapısı analiz ediliyor...")
+            
+            # Ana klasörleri tara
+            for item in os.listdir(self.target_path):
+                item_path = os.path.join(self.target_path, item)
+                
+                if os.path.isdir(item_path) and not self._is_system_folder_for_move(item):
+                    # Bu klasör bir kategori olabilir mi?
+                    category = self._determine_category_from_path(item_path)
+                    
+                    if category and category != 'other_files':
+                        print(f"📂 Kategori tespit edildi: {item} -> {category}")
+                        
+                        # Alt klasörleri kontrol et (uzantı klasörleri)
+                        self._scan_category_subfolders(item_path, category)
+            
+            # Öğrenilenleri kaydet
+            if self.learned_categories:
+                self.save_learned_categories()
+                print(f"✅ {len(self.learned_categories)} uzantı mevcut yapıdan öğrenildi")
+        
+        except Exception as e:
+            print(f"⚠️ Mevcut kategori analizi hatası: {e}")
+    
+    def _scan_category_subfolders(self, category_path, category):
+        """Kategori klasörü içindeki uzantı klasörlerini tara ve öğren"""
+        try:
+            for subfolder in os.listdir(category_path):
+                subfolder_path = os.path.join(category_path, subfolder)
+                
+                if os.path.isdir(subfolder_path):
+                    # Alt klasör adı uzantı olabilir mi?
+                    potential_extension = f".{subfolder.lower()}"
+                    
+                    # Klasördeki dosyaları kontrol et
+                    has_matching_files = False
+                    file_count = 0
+                    
+                    for file in os.listdir(subfolder_path):
+                        if os.path.isfile(os.path.join(subfolder_path, file)):
+                            file_count += 1
+                            file_ext = os.path.splitext(file)[1].lower()
+                            if file_ext == potential_extension:
+                                has_matching_files = True
+                    
+                    # Eğer klasörde bu uzantıdan dosyalar varsa öğren
+                    if has_matching_files and file_count > 0:
+                        print(f"📁 Uzantı klasörü bulundu: {potential_extension} -> {category} ({file_count} dosya)")
+                        
+                        # Öğren
+                        self.learned_categories[potential_extension] = category
+                        
+                        if not hasattr(self, 'category_confidence'):
+                            self.category_confidence = {}
+                        
+                        self.category_confidence[potential_extension] = {
+                            'category': category,
+                            'confidence': 95,  # Mevcut yapıdan öğrenme = %95 güven
+                            'source': 'existing_structure',
+                            'timestamp': time.time(),
+                            'learned_folder': subfolder_path
+                        }
+        
+        except Exception as e:
+            print(f"⚠️ Alt klasör tarama hatası: {e}")
     
     def detect_category_move(self, moved_folder_path, target_parent_path):
-        """Kullanıcının kategori taşıması tespit et ve öğren"""
+        """KULLANICI TERCİHİ ÖĞRENME SİSTEMİ - Güçlendirilmiş Versiyon"""
         try:
             # Taşınan klasörün adını al
             folder_name = os.path.basename(moved_folder_path).upper()
@@ -2224,52 +2885,302 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
             target_category = self._determine_category_from_path(target_parent_path)
             
             if target_category and target_category != 'other_files':
-                # Bu klasör adının bir uzantı olup olmadığını kontrol et
+                print(f"🎯 KULLANICI TERCİHİ TESPİT EDİLDİ: {folder_name} -> {target_category}")
+                
+                # 1. UZANTI KLASÖRÜ TAŞIMA - En güçlü öğrenme sinyali
                 potential_extension = f".{folder_name.lower()}"
                 
-                # Eğer bu uzantı bilinen kategorilerden birinde varsa
+                # Mevcut kategori sisteminde bu uzantı var mı?
                 current_category = self._find_extension_in_categories(potential_extension)
                 
-                if current_category and current_category != target_category:
-                    # Kategori değişikliği tespit edildi!
-                    print(f"🧠 KATEGORİ ÖĞRENMESİ: {potential_extension} uzantısı {current_category} -> {target_category}")
-                    
-                    # Öğren ve kaydet
-                    self.learned_categories[potential_extension] = target_category
-                    self.save_learned_categories()
-                    
-                    # Kullanıcıya bildir
-                    self.gui.status_var.set(f"🎓 Öğrenildi: {potential_extension} artık {target_category} kategorisinde")
-                    
-                elif not current_category:
-                    # Yeni uzantı öğreniliyor
+                if current_category:
+                    if current_category != target_category:
+                        # KATEGORİ DEĞİŞİKLİĞİ - Kullanıcı farklı bir kategori seçti
+                        print(f"🔄 KATEGORİ DEĞİŞİKLİĞİ: {potential_extension} {current_category} -> {target_category}")
+                        self._override_extension_category(potential_extension, current_category, target_category)
+                    else:
+                        # AYNI KATEGORİ - Tercihi pekiştir
+                        print(f"✅ KATEGORİ PEKİŞTİRME: {potential_extension} -> {target_category}")
+                        self._reinforce_extension_category(potential_extension, target_category)
+                else:
+                    # YENİ UZANTI - İlk kez öğreniliyor
                     print(f"🆕 YENİ UZANTI ÖĞRENMESİ: {potential_extension} -> {target_category}")
-                    self.learned_categories[potential_extension] = target_category
-                    self.save_learned_categories()
-                    self.gui.status_var.set(f"🎓 Yeni uzantı öğrenildi: {potential_extension} -> {target_category}")
+                    self._learn_new_extension(potential_extension, target_category)
+                
+                # 2. KLASÖR İÇERİĞİ ÖĞRENME - Taşınan klasördeki dosyalardan öğren
+                if os.path.exists(moved_folder_path):
+                    self._learn_from_folder_contents_enhanced(moved_folder_path, target_category)
                     
         except Exception as e:
             print(f"⚠️ Kategori öğrenme hatası: {e}")
     
-    def _determine_category_from_path(self, folder_path):
-        """Klasör yolundan kategori ismini belirle"""
+    def detect_category_move_for_file(self, moved_file_path, target_folder):
+        """DOSYA TAŞIMA ÖĞRENME SİSTEMİ - Tek dosya için"""
         try:
+            # Dosya uzantısını al
+            file_extension = os.path.splitext(moved_file_path)[1].lower()
+            if not file_extension:
+                print("⚠️ Uzantısız dosya - öğrenme yapılmadı")
+                return
+            
+            # Hedef klasörün kategori ismini belirle
+            target_category = self._determine_category_from_path(target_folder)
+            
+            if target_category and target_category != 'other_files':
+                print(f"🎯 DOSYA TAŞIMA ÖĞRENME: {file_extension} -> {target_category}")
+                
+                # Mevcut kategori sisteminde bu uzantı var mı?
+                current_category = self._find_extension_in_categories(file_extension)
+                
+                if current_category:
+                    if current_category != target_category:
+                        # KATEGORİ DEĞİŞİKLİĞİ - Kullanıcı farklı bir kategori seçti
+                        print(f"🔄 UZANTI KATEGORİ DEĞİŞİKLİĞİ: {file_extension} {current_category} -> {target_category}")
+                        self._override_extension_category(file_extension, current_category, target_category)
+                    else:
+                        # AYNI KATEGORİ - Tercihi pekiştir
+                        print(f"✅ UZANTI PEKİŞTİRME: {file_extension} -> {target_category}")
+                        self._reinforce_extension_category(file_extension, target_category)
+                else:
+                    # YENİ UZANTI - İlk kez öğreniliyor
+                    print(f"🆕 YENİ UZANTI ÖĞRENMESİ: {file_extension} -> {target_category}")
+                    self._learn_new_extension(file_extension, target_category)
+                
+                # Öğrenilenleri kaydet
+                self.save_learned_categories()
+                print(f"💾 Öğrenme kaydedildi: {file_extension} -> {target_category}")
+            else:
+                print(f"⚠️ Hedef kategori belirlenemedi: {target_folder}")
+                    
+        except Exception as e:
+            import traceback
+            print(f"⚠️ Dosya öğrenme hatası: {e}")
+            print(f"⚠️ TRACEBACK: {traceback.format_exc()}")
+
+    def _override_extension_category(self, extension, old_category, new_category):
+        """Kullanıcı farklı kategori seçti - eski kategoriyi geçersiz kıl"""
+        try:
+            # Kullanıcının açık tercihi
+            self.learned_categories[extension] = new_category
+            
+            # Güven skoru ekle - kullanıcı tercihi en yüksek güven
+            if not hasattr(self, 'category_confidence'):
+                self.category_confidence = {}
+            
+            self.category_confidence[extension] = {
+                'category': new_category,
+                'confidence': 100,  # Kullanıcı tercihi = %100 güven
+                'source': 'user_override',
+                'timestamp': time.time()
+            }
+            
+            # Hemen JSON'ı güncelle
+            self.save_learned_categories()
+            
+            # GUI'yi güncelle
+            self.gui.status_var.set(lang_manager.get_text('messages.category_changed', extension=extension, category=new_category))
+            print(f"✅ KATEGORİ DEĞİŞTİRİLDİ: {extension} -> {new_category}")
+            
+        except Exception as e:
+            print(f"❌ Kategori değiştirme hatası: {e}")
+            print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+    def _reinforce_extension_category(self, extension, category):
+        """Aynı kategori seçimi - tercihi güçlendir"""
+        try:
+            # Öğrenme verilerini güncelle
+            self.learned_categories[extension] = category
+            
+            if not hasattr(self, 'category_confidence'):
+                self.category_confidence = {}
+            
+            # Güven skorunu artır
+            current_confidence = self.category_confidence.get(extension, {}).get('confidence', 50)
+            new_confidence = min(100, current_confidence + 10)
+            
+            self.category_confidence[extension] = {
+                'category': category,
+                'confidence': new_confidence,
+                'source': 'user_reinforcement',
+                'timestamp': time.time()
+            }
+            
+            # Hemen JSON'ı güncelle
+            self.save_learned_categories()
+            
+            # GUI'yi güncelle
+            print(f"✨ KATEGORİ PEKİŞTİRİLDİ: {extension} -> {category} (güven: {new_confidence}%)")
+            
+        except Exception as e:
+            print(f"❌ Kategori pekiştirme hatası: {e}")
+            print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+    def _learn_new_extension(self, extension, category):
+        """Yeni uzantı öğrenme"""
+        try:
+            # Öğrenme verilerini güncelle
+            self.learned_categories[extension] = category
+            
+            if not hasattr(self, 'category_confidence'):
+                self.category_confidence = {}
+            
+            self.category_confidence[extension] = {
+                'category': category,
+                'confidence': 80,  # Yeni öğrenme = %80 güven
+                'source': 'user_teaching',
+                'timestamp': time.time()
+            }
+            
+            # Hemen JSON'ı güncelle
+            self.save_learned_categories()
+            
+            # GUI'yi güncelle
+            self.gui.status_var.set(lang_manager.get_text('messages.extension_learned', extension=extension, category=category))
+            print(f"✅ YENİ UZANTI ÖĞRENİLDİ: {extension} -> {category}")
+            
+        except Exception as e:
+            print(f"❌ Yeni uzantı öğrenme hatası: {e}")
+            print(f"❌ TRACEBACK: {traceback.format_exc()}")
+
+    def _learn_from_folder_contents_enhanced(self, folder_path, target_category):
+        """Klasör içeriğinden gelişmiş öğrenme"""
+        try:
+            learned_extensions = []
+            
+            # Klasördeki dosyaları analiz et
+            for item in os.listdir(folder_path):
+                item_path = os.path.join(folder_path, item)
+                
+                if os.path.isfile(item_path):
+                    extension = os.path.splitext(item)[1].lower()
+                    
+                    if extension and len(extension) > 1:  # Geçerli uzantı
+                        # Bu uzantı için mevcut tercihi kontrol et
+                        current_preference = self.learned_categories.get(extension)
+                        
+                        if not current_preference:
+                            # Hiç öğrenilmemiş - öğren
+                            self.learned_categories[extension] = target_category
+                            learned_extensions.append(extension)
+                            print(f"📚 KLASÖR İÇERİĞİNDEN: {extension} -> {target_category}")
+                        elif current_preference != target_category:
+                            # Çakışma var - kullanıcının bu hareketi düşük güvenle kaydet
+                            if not hasattr(self, 'category_conflicts'):
+                                self.category_conflicts = {}
+                            
+                            if extension not in self.category_conflicts:
+                                self.category_conflicts[extension] = []
+                            
+                            self.category_conflicts[extension].append({
+                                'suggested_category': target_category,
+                                'timestamp': time.time(),
+                                'source': 'folder_content'
+                            })
+                            
+                            print(f"⚠️ KATEGORİ ÇAKIŞMASI: {extension} ({current_preference} vs {target_category})")
+            
+            if learned_extensions:
+                self.save_learned_categories()
+                self.gui.status_var.set(lang_manager.get_text('messages.folder_learning', count=len(learned_extensions)))
+                
+        except Exception as e:
+            print(f"⚠️ Klasör içeriği öğrenme hatası: {e}")
+    
+    def get_file_category_with_learning(self, file_path):
+        """YENİ TARGET-BAZLI öğrenme sistemi ile kategori belirleme"""
+        extension = os.path.splitext(file_path)[1].lower()
+        
+        # 1. TARGET-BAZLI ÖĞRENME KONTROLÜ
+        if hasattr(self, 'learned_categories') and self.learned_categories and extension in self.learned_categories:
+            learned_info = self.learned_categories[extension]
             categories = self.get_file_categories()
             
-            # Yolu parçalara ayır ve her parçayı kontrol et
-            path_parts = folder_path.replace('\\', '/').split('/')
+            # learned_info string ise (basit format: uzantı -> kategori)
+            if isinstance(learned_info, str):
+                learned_cat_key = learned_info
+                confidence = 95  # Target-bazlı öğrenme yüksek güven
+            else:
+                # Detaylı format - dict
+                learned_cat_key = learned_info.get('category', '')
+                confidence = learned_info.get('confidence', 95)
             
-            for part in path_parts:
-                if part:
-                    # Bu parça kategori klasör isimlerinden biri mi?
-                    for cat_name, cat_info in categories.items():
-                        if part.lower() == cat_info['folder'].lower():
-                            return cat_name
-                        
-                        # Kısmi eşleşme de kontrol et
-                        if (part.lower() in cat_info['folder'].lower() or 
-                            cat_info['folder'].lower() in part.lower()):
-                            return cat_name
+            # Kategori anahtarını kontrol et
+            if learned_cat_key in categories:
+                print(f"🎯 TARGET LEARNING APPLIED: {extension} -> {learned_cat_key} (confidence: {confidence}%)")
+                return learned_cat_key, categories[learned_cat_key]
+            else:
+                # Eski kategori adı olabilir, güncelle
+                print(f"⚠️ Unknown learned category key: {learned_cat_key}, falling back to default")
+        
+        # 2. DEFAULT İNGİLİZCE KATEGORİ SİSTEMİ
+        return self.get_file_category(file_path)
+    
+    def _determine_category_from_path(self, folder_path):
+        """Hedef klasörün kategori ismini belirle - Geliştirilmiş versiyon"""
+        try:
+            # Klasör adını al
+            folder_name = os.path.basename(folder_path).lower()
+            
+            # Kategori eşleştirme tablosu
+            category_mapping = {
+                'image files': 'image_files',
+                'images': 'image_files',
+                'resimler': 'image_files',
+                'fotograflar': 'image_files',
+                'document files': 'document_files',
+                'documents': 'document_files',
+                'belgeler': 'document_files',
+                'video files': 'video_files',
+                'videos': 'video_files',
+                'videolar': 'video_files',
+                'audio files': 'audio_files',
+                'audios': 'audio_files',
+                'sesler': 'audio_files',
+                'müzikler': 'audio_files',
+                'archive files': 'archive_files',
+                'archives': 'archive_files',
+                'arşivler': 'archive_files',
+                'program files': 'program_files',
+                'programs': 'program_files',
+                'uygulamalar': 'program_files',
+                'cad and 3d files': 'cad_3d_files',
+                'cad files': 'cad_3d_files',
+                '3d files': 'cad_3d_files',
+                'code files': 'code_files',
+                'codes': 'code_files',
+                'kodlar': 'code_files',
+                'font files': 'font_files',
+                'fonts': 'font_files',
+                'yazı tipleri': 'font_files'
+            }
+            
+            # Doğrudan eşleşme kontrolü
+            if folder_name in category_mapping:
+                return category_mapping[folder_name]
+            
+            # Kısmi eşleşme kontrolü
+            for key, value in category_mapping.items():
+                if key in folder_name:
+                    return value
+            
+            # Klasör içeriğinden kategori tahmini
+            if os.path.exists(folder_path) and os.path.isdir(folder_path):
+                file_extensions = set()
+                for file in os.listdir(folder_path):
+                    if os.path.isfile(os.path.join(folder_path, file)):
+                        ext = os.path.splitext(file)[1].lower()
+                        if ext:
+                            file_extensions.add(ext)
+                
+                # En yaygın kategoriyi bul
+                category_counts = defaultdict(int)
+                for ext in file_extensions:
+                    category = self._find_extension_in_categories(ext)
+                    if category:
+                        category_counts[category] += 1
+                
+                if category_counts:
+                    return max(category_counts.items(), key=lambda x: x[1])[0]
             
             return None
             
@@ -2292,18 +3203,226 @@ Tür: {"Klasör" if os.path.isdir(file_path) else "Dosya"}
             print(f"⚠️ Uzantı kategorisi bulunamadı: {e}")
             return None
     
-    def get_file_category_with_learning(self, file_path):
-        """Dosya kategorisini öğrenilen kategorilerle birlikte belirle"""
-        extension = os.path.splitext(file_path)[1].lower()
+    def _check_learned_category_for_scan(self, extension):
+        """YENİ TARGET-BAZLI tarama aşamasında öğrenilen kategoriyi kontrol et"""
+        if not extension or not hasattr(self, 'learned_categories'):
+            return None
         
-        # Önce öğrenilen kategorileri kontrol et
-        if extension in self.learned_categories:
-            learned_cat = self.learned_categories[extension]
-            categories = self.get_file_categories()
+        # Öğrenilen kategorileri yükle (target-bazlı)
+        if not self.learned_categories:
+            self.load_learned_categories()
+        
+        # Target'ta öğrenme yoksa default sistem
+        if not self.learned_categories:
+            print(f"📂 DEFAULT SYSTEM: No target learning for {extension}")
+            return None
+        
+        # Uzantı normalize et
+        extension_key = extension.lower()
+        if not extension_key.startswith('.'):
+            extension_key = '.' + extension_key
+        
+        # Öğrenilen kategorilerde var mı kontrol et
+        if extension_key in self.learned_categories:
+            learned_info = self.learned_categories[extension_key]
             
-            if learned_cat in categories:
-                print(f"🧠 Öğrenilen kategori kullanılıyor: {extension} -> {learned_cat}")
-                return learned_cat, categories[learned_cat]
+            # learned_info string ise (basit format: uzantı -> kategori)
+            if isinstance(learned_info, str):
+                category = learned_info
+                confidence = 95  # Target-bazlı öğrenme yüksek güven
+            else:
+                # Detaylı format - dict
+                confidence = learned_info.get('confidence', 95)
+                category = learned_info.get('category', '')
+            
+            if confidence >= 80:  # %80 ve üzeri confidence
+                # Kategori anahtarını İngilizce klasör adına çevir
+                categories = self.get_file_categories()
+                if category in categories:
+                    category_info = categories[category]
+                    category_folder_name = category_info['folder']  # Sabit İngilizce
+                    
+                    print(f"🎯 TARGET LEARNING APPLIED: {extension} -> {category_folder_name} (confidence: {confidence}%)")
+                    
+                    # Sadece kategori klasör adını döndür - ScanEngine'in organization_structure'ına uygun
+                    return {
+                        'category': category,
+                        'folder': category_folder_name,
+                        'confidence': confidence
+                    }
+                else:
+                    print(f"⚠️ Unknown learned category key: {category}, fallback to default")
         
-        # Standart kategori sistemini kullan
-        return self.get_file_category(file_path)
+        print(f"📂 DEFAULT SYSTEM: No learning found for {extension}")
+        return None
+
+    def _create_progress_dialog(self, title, message):
+        """Progress dialog oluştur"""
+        import tkinter as tk
+        from tkinter import ttk
+        
+        class ProgressDialog:
+            def __init__(self, parent, title, message):
+                self.dialog = tk.Toplevel(parent)
+                self.dialog.title(title)
+                self.dialog.geometry("400x200")
+                self.dialog.transient(parent)
+                self.dialog.grab_set()
+                self.dialog.resizable(False, False)
+                
+                # Center the dialog
+                self.dialog.geometry("+%d+%d" % (
+                    parent.winfo_rootx() + 50, 
+                    parent.winfo_rooty() + 50
+                ))
+                
+                # Main frame
+                main_frame = ttk.Frame(self.dialog)
+                main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+                
+                # Title label
+                self.title_label = ttk.Label(main_frame, text=message, font=("Arial", 10, "bold"))
+                self.title_label.pack(pady=(0, 15))
+                
+                # Progress bar
+                self.progress_var = tk.DoubleVar()
+                self.progress_bar = ttk.Progressbar(
+                    main_frame, 
+                    variable=self.progress_var, 
+                    maximum=100,
+                    mode='determinate'
+                )
+                self.progress_bar.pack(fill=tk.X, pady=(0, 10))
+                
+                # Status label
+                self.status_label = ttk.Label(main_frame, text="Başlıyor...", font=("Arial", 9))
+                self.status_label.pack(pady=(0, 15))
+                
+                # Cancel button
+                self.cancel_button = ttk.Button(main_frame, text="İptal", command=self.cancel)
+                self.cancel_button.pack()
+                
+                self.cancelled = False
+                self.completed = False
+                
+                # Update the dialog
+                self.dialog.update()
+                
+            def update_progress(self, progress, status_text=""):
+                if not self.cancelled and not self.completed:
+                    self.progress_var.set(progress)
+                    if status_text:
+                        self.status_label.config(text=status_text)
+                    self.dialog.update_idletasks()
+                    
+            def set_completed(self, message="Tamamlandı"):
+                self.completed = True
+                self.progress_var.set(100)
+                self.status_label.config(text=message)
+                self.cancel_button.config(text="Kapat")
+                self.dialog.update_idletasks()
+                
+                # Auto close after 2 seconds
+                self.dialog.after(2000, self.close)
+                
+            def set_error(self, error_message):
+                self.completed = True
+                self.status_label.config(text=f"Hata: {error_message}")
+                self.cancel_button.config(text="Kapat")
+                self.dialog.update_idletasks()
+                
+            def cancel(self):
+                if not self.completed:
+                    self.cancelled = True
+                self.close()
+                
+            def close(self):
+                try:
+                    self.dialog.destroy()
+                except:
+                    pass
+
+    def _sync_with_default_categories(self):
+        """Default kategorilerle JSON'u senkronize et - eksik uzantıları ekle, kaldırılanları sil"""
+        try:
+            # Default kategorilerden mevcut uzantıları al
+            default_categories = self.get_file_categories()
+            current_default_extensions = {}
+            
+            # Tüm default uzantıları topla
+            for category_name, category_info in default_categories.items():
+                if category_name == 'other_files' or category_name == 'software_packages':
+                    continue  # Bu kategoriler özel
+                
+                for extension in category_info.get('extensions', []):
+                    current_default_extensions[extension] = category_name
+            
+            # JSON'da eksik olan default uzantıları ekle
+            added_count = 0
+            for extension, category in current_default_extensions.items():
+                if extension not in self.learned_categories:
+                    self.learned_categories[extension] = category
+                    added_count += 1
+                    print(f"➕ SYNC ADD: {extension} → {category}")
+            
+            # JSON'da olan ama default'da olmayan uzantıları kontrol et (kullanıcı öğretmişse kalsın)
+            removed_count = 0
+            default_extension_list = list(current_default_extensions.keys())
+            
+            # Sadece default kategorilerden kaldırılan uzantıları sil
+            # Kullanıcının öğrettiği (learned) uzantıları sakla
+            for extension in list(self.learned_categories.keys()):
+                # Eğer bu uzantı daha önce default'da vardı ama artık yoksa
+                if (extension in default_extension_list and 
+                    extension not in current_default_extensions and
+                    not self._is_user_learned_extension(extension)):
+                    del self.learned_categories[extension]
+                    removed_count += 1
+                    print(f"➖ SYNC REMOVE: {extension} (default'dan kaldırıldı)")
+            
+            if added_count > 0 or removed_count > 0:
+                print(f"🔄 SYNC RESULT: +{added_count} eklendi, -{removed_count} kaldırıldı")
+                return True
+            else:
+                print(f"✅ SYNC OK: Değişiklik gerekmiyor")
+                return False
+                
+        except Exception as e:
+            print(f"⚠️ Sync error: {e}")
+            return False
+    
+    def _is_user_learned_extension(self, extension):
+        """Bu uzantı kullanıcı tarafından öğretildi mi? (confidence veya conflict verisi var mı?)"""
+        try:
+            # Confidence verisi varsa kullanıcı öğretmiştir
+            if hasattr(self, 'category_confidence') and extension in self.category_confidence:
+                return True
+            
+            # Conflict verisi varsa kullanıcı öğretmiştir  
+            if hasattr(self, 'category_conflicts') and extension in self.category_conflicts:
+                return True
+                
+            # Bu uzantı hiç default kategorilerde yoksa kullanıcı öğretmiştir
+            default_categories = self.get_file_categories()
+            for category_info in default_categories.values():
+                if extension in category_info.get('extensions', []):
+                    return False  # Default'da var, kullanıcı öğretmesi değil
+            
+            return True  # Default'da yok, kullanıcı öğretmesi
+            
+        except Exception as e:
+            print(f"⚠️ User learned check error: {e}")
+            return True  # Şüphe durumunda kullanıcı öğretmesi say, silme
+
+    def _calculate_file_hash(self, file_path, chunk_size=8192):
+        """Dosya hash'ini hesapla"""
+        try:
+            import hashlib
+            hash_md5 = hashlib.md5()
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(chunk_size), b""):
+                    hash_md5.update(chunk)
+            return hash_md5.hexdigest()
+        except Exception as e:
+            print(f"❌ Hash hesaplama hatası: {file_path} - {e}")
+            return None

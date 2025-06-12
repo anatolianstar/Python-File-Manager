@@ -10,6 +10,7 @@ import threading
 import time
 from pathlib import Path
 from collections import defaultdict
+from lang_manager import lang_manager
 
 class ReportingManager:
     def __init__(self, gui_manager, file_operations, scan_engine):
@@ -208,7 +209,7 @@ class ReportingManager:
         """Analiz sonuçlarını göster"""
         # Yeni pencere oluştur
         analysis_window = tk.Toplevel(self.gui.root)
-        analysis_window.title("🔍 Hedef Disk Analizi Raporu")
+        analysis_window.title(lang_manager.get_text('reports.analysis.title'))
         analysis_window.geometry("800x600")
         analysis_window.transient(self.gui.root)
         
@@ -239,57 +240,57 @@ class ReportingManager:
         report += "=" * 50 + "\n\n"
         
         # Genel istatistikler
-        report += "📊 GENEL İSTATİSTİKLER\n"
+        report += f"{lang_manager.get_text('reports.analysis.general_stats')}\n"
         report += "-" * 30 + "\n"
-        report += f"Kaynak klasör: {self.gui.source_var.get()}\n"
-        report += f"Hedef klasör: {self.gui.target_var.get()}\n"
-        report += f"Tarama tarihi: {time.strftime('%d.%m.%Y %H:%M:%S')}\n\n"
+        report += f"{lang_manager.get_text('reports.analysis.source_folder')}: {self.gui.source_var.get()}\n"
+        report += f"{lang_manager.get_text('reports.analysis.target_folder')}: {self.gui.target_var.get()}\n"
+        report += f"{lang_manager.get_text('reports.analysis.scan_date')}: {time.strftime('%d.%m.%Y %H:%M:%S')}\n\n"
         
         # Dosya sayıları
         total_source = len(self.scan_engine.unique_files)
         new_files = self.target_analysis['new_files']
         existing_files = self.target_analysis['existing_files']
         
-        report += f"Toplam kaynak dosya: {total_source}\n"
-        report += f"Kopyalanacak dosya: {new_files}\n"
-        report += f"Zaten mevcut dosya: {existing_files}\n"
-        report += f"Duplikat dosya: {len(self.scan_engine.duplicate_files)}\n\n"
+        report += f"{lang_manager.get_text('reports.analysis.total_source_files')}: {total_source}\n"
+        report += f"{lang_manager.get_text('reports.analysis.files_to_copy')}: {new_files}\n"
+        report += f"{lang_manager.get_text('reports.analysis.existing_files')}: {existing_files}\n"
+        report += f"{lang_manager.get_text('reports.analysis.duplicate_files')}: {len(self.scan_engine.duplicate_files)}\n\n"
         
         # Boyut bilgileri
-        report += "💾 BOYUT BİLGİLERİ\n"
+        report += f"{lang_manager.get_text('reports.analysis.size_info')}\n"
         report += "-" * 30 + "\n"
-        report += f"Kopyalanacak toplam boyut: {self._format_size(self.target_analysis['total_copy_size'])}\n"
-        report += f"Mevcut dosya boyutu: {self._format_size(self.target_analysis['existing_size'])}\n\n"
+        report += f"{lang_manager.get_text('reports.analysis.total_copy_size')}: {self._format_size(self.target_analysis['total_copy_size'])}\n"
+        report += f"{lang_manager.get_text('reports.analysis.existing_size')}: {self._format_size(self.target_analysis['existing_size'])}\n\n"
         
         # Disk alanı analizi
         if 'error' not in self.disk_analysis:
-            report += "💿 DİSK ALANI ANALİZİ\n"
+            report += f"{lang_manager.get_text('reports.analysis.disk_analysis')}\n"
             report += "-" * 30 + "\n"
-            report += f"Toplam disk alanı: {self._format_size(self.disk_analysis['total_space'])}\n"
-            report += f"Kullanılan alan: {self._format_size(self.disk_analysis['used_space'])}\n"
-            report += f"Boş alan: {self._format_size(self.disk_analysis['free_space'])}\n"
-            report += f"Gerekli alan: {self._format_size(self.disk_analysis['required_space'])}\n"
+            report += f"{lang_manager.get_text('reports.analysis.total_disk_space')}: {self._format_size(self.disk_analysis['total_space'])}\n"
+            report += f"{lang_manager.get_text('reports.analysis.used_space')}: {self._format_size(self.disk_analysis['used_space'])}\n"
+            report += f"{lang_manager.get_text('reports.analysis.free_space')}: {self._format_size(self.disk_analysis['free_space'])}\n"
+            report += f"{lang_manager.get_text('reports.analysis.required_space')}: {self._format_size(self.disk_analysis['required_space'])}\n"
             
             if self.disk_analysis['space_sufficient']:
                 remaining = self.disk_analysis['space_after_copy']
-                report += f"✅ Yeterli alan var! Kalan: {self._format_size(remaining)}\n\n"
+                report += f"{lang_manager.get_text('reports.analysis.sufficient_space')}: {self._format_size(remaining)}\n\n"
             else:
                 shortage = self.disk_analysis['required_space'] - self.disk_analysis['free_space']
-                report += f"❌ Yetersiz alan! Eksik: {self._format_size(shortage)}\n\n"
+                report += f"{lang_manager.get_text('reports.analysis.insufficient_space')}: {self._format_size(shortage)}\n\n"
         
         # Kategori bazlı analiz
-        report += "📁 KATEGORİ BAZLI ANALİZ\n"
+        report += f"{lang_manager.get_text('reports.analysis.category_analysis')}\n"
         report += "-" * 30 + "\n"
         
         for category, analysis in self.category_analysis.items():
             if analysis['to_copy'] > 0 or analysis['existing'] > 0:
                 category_name = category.title().replace('_', ' ')
                 report += f"\n🏷️ {category_name}:\n"
-                report += f"  • Kopyalanacak: {analysis['to_copy']} dosya ({self._format_size(analysis['copy_size'])})\n"
-                report += f"  • Mevcut: {analysis['existing']} dosya ({self._format_size(analysis['existing_size'])})\n"
+                report += f"  • {lang_manager.get_text('reports.analysis.to_copy')}: {analysis['to_copy']} dosya ({self._format_size(analysis['copy_size'])})\n"
+                report += f"  • {lang_manager.get_text('reports.analysis.existing')}: {analysis['existing']} dosya ({self._format_size(analysis['existing_size'])})\n"
         
         # Detaylı organizasyon yapısı
-        report += "\n\n📂 DETAYLI ORGANİZASYON YAPISI\n"
+        report += f"\n\n{lang_manager.get_text('reports.analysis.organization_structure')}\n"
         report += "-" * 40 + "\n"
         
         for main_folder, subfolders in self.scan_engine.organization_structure.items():
@@ -311,10 +312,10 @@ class ReportingManager:
         
         # Duplikat analizi
         if self.scan_engine.source_duplicates:
-            report += "\n\n🔄 DUPLİKAT DOSYA ANALİZİ\n"
+            report += f"\n\n{lang_manager.get_text('reports.analysis.duplicate_analysis')}\n"
             report += "-" * 40 + "\n"
-            report += f"Toplam duplikat grup: {len(self.scan_engine.source_duplicates)}\n"
-            report += f"Toplam duplikat dosya: {len(self.scan_engine.duplicate_files)}\n\n"
+            report += f"{lang_manager.get_text('reports.analysis.total_duplicate_groups')}: {len(self.scan_engine.source_duplicates)}\n"
+            report += f"{lang_manager.get_text('reports.analysis.total_duplicate_files')}: {len(self.scan_engine.duplicate_files)}\n\n"
             
             for i, duplicate_group in enumerate(self.scan_engine.source_duplicates[:10]):  # İlk 10 grup
                 report += f"Grup {i+1}: {len(duplicate_group)} dosya\n"
@@ -326,28 +327,28 @@ class ReportingManager:
                 report += f"... ve {len(self.scan_engine.source_duplicates) - 10} grup daha\n"
         
         # Öneriler
-        report += "\n\n💡 ÖNERİLER\n"
+        report += f"\n\n{lang_manager.get_text('reports.analysis.suggestions')}\n"
         report += "-" * 20 + "\n"
         
         if self.target_analysis['new_files'] == 0:
-            report += "✅ Tüm dosyalar zaten hedef klasörde mevcut.\n"
+            report += f"{lang_manager.get_text('reports.analysis.all_files_exist')}\n"
         elif not self.disk_analysis.get('space_sufficient', True):
-            report += "⚠️ Disk alanı yetersiz! Önce yer açın veya gereksiz dosyaları silin.\n"
+            report += f"{lang_manager.get_text('reports.analysis.insufficient_disk')}\n"
         else:
-            report += f"✅ {new_files} dosya kopyalanmaya hazır.\n"
+            report += f"✅ {lang_manager.get_text('messages.ready_to_copy').format(count=new_files)}\n"
         
         if len(self.scan_engine.duplicate_files) > 0:
-            report += f"🔄 {len(self.scan_engine.duplicate_files)} duplikat dosya tespit edildi. İncelemeniz önerilir.\n"
+            report += f"{lang_manager.get_text('reports.analysis.duplicates_found').format(count=len(self.scan_engine.duplicate_files))}\n"
         
         report += "\n" + "=" * 50 + "\n"
-        report += "Rapor sonu - Dosya Organizatörü v2.0"
+        report += f"{lang_manager.get_text('reports.analysis.report_end')}"
         
         return report
     
     def _save_report(self, report_content):
         """Raporu dosyaya kaydet"""
         filename = filedialog.asksaveasfilename(
-            title="Raporu Kaydet",
+            title=lang_manager.get_text('reports.save.title'),
             defaultextension=".txt",
             filetypes=[("Metin Dosyası", "*.txt"), ("Tüm Dosyalar", "*.*")],
             initialname=f"hedef_disk_analizi_{time.strftime('%Y%m%d_%H%M%S')}.txt"
@@ -357,19 +358,19 @@ class ReportingManager:
             try:
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write(report_content)
-                messagebox.showinfo("Başarılı", f"Rapor kaydedildi:\n{filename}")
+                messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), f"{lang_manager.get_text('reports.save.success')}:\n{filename}")
             except Exception as e:
-                messagebox.showerror("Hata", f"Rapor kaydedilemedi: {e}")
+                messagebox.showerror(lang_manager.get_text('dialogs.error.title'), f"{lang_manager.get_text('reports.save.error')}: {e}")
     
     def show_duplicates(self):
         """Duplikat dosyaları detaylı göster"""
         if not self.scan_engine.source_duplicates:
-            messagebox.showinfo("Bilgi", "Duplikat dosya bulunamadı!")
+            messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), lang_manager.get_text('reports.duplicate.no_duplicates'))
             return
         
         # Duplikat raporu penceresi
         dup_window = tk.Toplevel(self.gui.root)
-        dup_window.title("🔄 Duplikat Dosya Raporu")
+        dup_window.title(lang_manager.get_text('reports.duplicate.title'))
         dup_window.geometry("700x500")
         dup_window.transient(self.gui.root)
         
@@ -389,33 +390,33 @@ class ReportingManager:
         button_frame = tk.Frame(dup_window)
         button_frame.pack(fill=tk.X, padx=10, pady=(0, 10))
         
-        tk.Button(button_frame, text="📄 Raporu Kaydet", 
+        tk.Button(button_frame, text=lang_manager.get_text('reports.duplicate.save_report'), 
                  command=lambda: self._save_report(dup_report)).pack(side=tk.LEFT, padx=(0, 5))
-        tk.Button(button_frame, text="❌ Kapat", 
+        tk.Button(button_frame, text=lang_manager.get_text('reports.duplicate.close'), 
                  command=dup_window.destroy).pack(side=tk.RIGHT)
     
     def _generate_duplicate_report(self):
         """Duplikat raporu oluştur"""
-        report = "🔄 DUPLİKAT DOSYA RAPORU\n"
+        report = f"{lang_manager.get_text('reports.duplicate.title')}\n"
         report += "=" * 40 + "\n\n"
         
-        report += f"Toplam duplikat grup: {len(self.scan_engine.source_duplicates)}\n"
-        report += f"Toplam duplikat dosya: {len(self.scan_engine.duplicate_files)}\n"
-        report += f"Rapor tarihi: {time.strftime('%d.%m.%Y %H:%M:%S')}\n\n"
+        report += f"{lang_manager.get_text('reports.analysis.total_duplicate_groups')}: {len(self.scan_engine.source_duplicates)}\n"
+        report += f"{lang_manager.get_text('reports.analysis.total_duplicate_files')}: {len(self.scan_engine.duplicate_files)}\n"
+        report += f"{lang_manager.get_text('reports.duplicate.report_date')}: {time.strftime('%d.%m.%Y %H:%M:%S')}\n\n"
         
         # Her duplikat grubu için
         for i, duplicate_group in enumerate(self.scan_engine.source_duplicates):
-            report += f"📁 GRUP {i+1} ({len(duplicate_group)} dosya)\n"
+            report += f"{lang_manager.get_text('reports.duplicate.group')} {i+1} ({len(duplicate_group)} dosya)\n"
             report += "-" * 30 + "\n"
             
             # Grup bilgileri
             first_file = duplicate_group[0]
-            report += f"Dosya adı: {first_file['name']}\n"
-            report += f"Boyut: {self._format_size(first_file['size'])}\n"
-            report += f"Uzantı: {first_file['extension']}\n\n"
+            report += f"{lang_manager.get_text('reports.duplicate.file_name')}: {first_file['name']}\n"
+            report += f"{lang_manager.get_text('reports.duplicate.size')}: {self._format_size(first_file['size'])}\n"
+            report += f"{lang_manager.get_text('reports.duplicate.extension')}: {first_file['extension']}\n\n"
             
             # Dosya yolları
-            report += "Dosya konumları:\n"
+            report += f"{lang_manager.get_text('reports.duplicate.locations')}:\n"
             for j, file_info in enumerate(duplicate_group):
                 report += f"  {j+1}. {file_info['path']}\n"
             

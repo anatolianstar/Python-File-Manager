@@ -1,47 +1,23 @@
-# File Manager için gerekli kütüphaneler
-# Tkinter Python ile birlikte gelir, ek kurulum gerekmez
+# Python File Manager - Requirements
+# This file contains only external packages that need to be installed via pip
+# All other modules come from Python standard libraries
 
-# Dosya işlemleri için (Python built-in)
-pathlib
+# Core dependencies (all included with Python)
+# tkinter - GUI framework (included with Python)
+# hashlib - File hashing (included with Python)
+# threading - Multi-threading support (included with Python)
+# shutil - High-level file operations (included with Python)
+# json - JSON data handling (included with Python)
+# os - Operating system interface (included with Python)
+# sys - System-specific parameters (included with Python)
+# stat - File status (included with Python)
+# time - Time-related functions (included with Python)
+# collections - Specialized container datatypes (included with Python)
+# pathlib - Object-oriented filesystem paths (included with Python)
+# traceback - Print or retrieve a stack traceback (included with Python)
 
-# Hash hesaplama için (Python built-in)
-hashlib
+# Optional dependencies (uncomment if needed):
+# aiofiles>=23.1.0  # For async file operations
+# pywin32>=305      # For Windows file system information
 
-# Threading için (Python built-in)
-threading
-
-# Dosya kopyalama için (Python built-in)
-shutil
-
-# GUI için (Python built-in)
-tkinter
-
-# JSON işlemleri için (Python built-in)
-json
-
-# Sistem işlemleri için (Python built-in)
-os
-sys
-stat
-time
-
-# Collections için (Python built-in)
-collections
-
-# Functools için (Python built-in)
-functools
-
-# Logging için (Python built-in)
-logging
-
-# Unittest için (Python built-in)
-unittest
-
-# Asyncio için (Python built-in)
-asyncio
-
-# External packages (pip ile kurulması gerekir)
-aiofiles>=23.1.0
-
-# TTK için (tkinter ile birlikte gelir)
-# ttk - tkinter.ttk olarak kullanılır 
+# No additional packages required for basic functionality! 

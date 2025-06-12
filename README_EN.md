@@ -1,190 +1,179 @@
-# 🗂️ Advanced Python File Manager
+# 🗂️ Smart Duplicate Control File Distribution Program
 
-[![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)]()
-[![GitHub stars](https://img.shields.io/github/stars/anatolianstar/Python-File-Manager.svg)](https://github.com/anatolianstar/Python-File-Manager/stargazers)
+🇬🇧 English | [🇹🇷 Türkçe](README.md)
 
-> **🌟 Professional file organization tool with automatic categorization, duplicate detection, and bilingual support**
+**Advanced file organization and distribution tool** - Automatically organizes your files with intelligent categorization and duplicate control.
 
-## 🚀 Quick Start
+## 🌟 Program Features
 
-### English Version (Recommended)
-```bash
-cd English_manager
-python main_modular.py
-```
+### 🧠 Smart Categorization System
+- **Automatic file classification**: 15+ different categories (images, videos, audio, documents, program files, etc.)
+- **Learning system**: Remembers and learns user preferences
+- **Target-oriented categorization**: Categories that adapt to specific folder structures
+- **Flexible category management**: Ability to add new categories and edit existing ones
 
-### Turkish Version
-```bash
-python main_modular.py
-```
+### 🔍 Duplicate Control and Security
+- **MD5 hash-based duplicate control**: Detects files with identical content
+- **Safe copying**: Preserves file integrity
+- **Conflict prevention**: Automatically renames different files with the same name
+- **Error tolerance**: Failed operations don't halt the system
 
-## ✨ Key Features
+### ⚡ Performance and User Experience
+- **Parallel operations**: Fast copying with multi-threading support
+- **Real-time progress tracking**: Accurate progress display including all subfolders
+- **Detailed operation reports**: Details of successful, skipped, and failed operations
+- **User-friendly interface**: Turkish menus and messages
+- **Wide file format support**: Support for 100+ file extensions
 
-### 🎯 Smart File Organization
-- **Automatic categorization** by file type (Images, Audio, Video, Documents, etc.)
-- **Drag & drop** interface with visual feedback
-- **Batch processing** for large file collections
-- **Custom category** configuration
-
-### 🔍 Advanced Duplicate Detection
-- **Multiple detection methods**: Name, Size, Hash (MD5)
-- **Real-time scanning** during organization
-- **Grouped results** with expandable tree view
-- **Smart conflict resolution**
-
-### 🖥️ Professional Interface
-- **Modern GUI** with tabbed interface
-- **File explorer** with navigation controls
-- **Keyboard shortcuts** (Delete, Ctrl+C/X/V, F2, F5)
-- **Context menus** and tooltips
-- **Progress tracking** with detailed reports
-
-### 🌐 Bilingual Support
-- **English interface** (Primary)
-- **Turkish interface** (Secondary)
-- **Localized messages** and documentation
-
-## 📸 Screenshots
-
-*Coming soon - Add screenshots of your application*
+### 📁 Folder Operations
+- **Deep folder structure support**: Complete organization including subfolders
+- **Folder merging**: Automatic merging of folders in the same category
+- **Structure preservation**: Important folder structures are preserved
+- **Selective organization**: Option to organize specific file types
 
 ## 🛠️ Installation
 
-### Prerequisites
+### Requirements
 - Python 3.7 or higher
-- tkinter (usually included with Python)
+- tkinter (usually comes with Python)
+- threading, shutil, hashlib (standard libraries)
 
-### Quick Install
-```bash
-git clone https://github.com/anatolianstar/Python-File-Manager.git
-cd Python-File-Manager
-pip install -r requirements.txt
-```
+### Installation Steps
+1. **Download the project:**
+   ```bash
+   git clone https://github.com/user/smart-file-distribution.git
+   cd smart-file-distribution
+   ```
 
-### Run Application
-```bash
-# English Version (Recommended)
-cd English_manager
-python main_modular.py
+2. **Run the program:**
+   ```bash
+   python main_modular.py
+   ```
 
-# Turkish Version
-python main_modular.py
-```
+## 🚀 User Guide
 
-## 📁 Project Structure
+### Main Features
 
-```
-Python-File-Manager/
-├── English_manager/          # 🇺🇸 English Version (Primary)
-│   ├── main_modular.py      # Main application
-│   ├── gui_manager.py       # GUI components
-│   ├── file_operations.py   # File handling
-│   ├── scan_engine.py       # Scanning logic
-│   └── reporting.py         # Reports & analytics
-├── main_modular.py          # 🇹🇷 Turkish Version
-├── gui_manager.py           # GUI components (TR)
-├── file_operations.py       # File handling (TR)
-├── scan_engine.py          # Scanning logic (TR)
-├── reporting.py            # Reports & analytics (TR)
-└── requirements.txt        # Dependencies
-```
+#### 1. 📋 File Scanning and Selection
+- **Folder selection**: Choose the source folder to organize
+- **File filtering**: Organize by selecting specific file types
+- **Preview**: See in advance which files will go where
 
-## 🎮 Usage Guide
+#### 2. 🎯 Target Folder Settings
+- **Select target location**: Specify the folder where files will be organized
+- **Category structure**: Preview automatically created category folders
+- **Customized organization**: Category settings according to your needs
 
-### Basic Workflow
-1. **Launch** the application
-2. **Select** source folder in left panel
-3. **Choose** target organization folder
-4. **Configure** duplicate detection settings
-5. **Click** "Organize Files" button
-6. **Review** the detailed completion report
+#### 3. ⚙️ Organize Operation
+- **One-click organization**: Press the "Organize" button
+- **Progress tracking**: Real-time progress bar and detailed information
+- **Error management**: Failed operations are automatically reported
+
+#### 4. 📊 Result Reports
+- **Detailed statistics**: Numbers of copied, skipped, and failed files
+- **Category distribution**: How many files were placed in each category
+- **Error analysis**: Reasons for failed operations
 
 ### Advanced Features
-- **F5**: Refresh folder contents
-- **Ctrl+Click**: Multi-select files
-- **Right-click**: Context menu operations
-- **Drag & Drop**: Move files between folders
 
-## 🔧 Configuration
+#### 🎓 Learning System
+The program learns user preferences and uses this information in future organizations:
+- Remembers manual category assignments
+- Recognizes frequently used folder structures
+- File type preferences are saved
 
-### File Categories
-The application automatically categorizes files into:
-- 📸 **Images**: JPG, PNG, GIF, BMP, TIFF, SVG
-- 🎵 **Audio**: MP3, WAV, FLAC, AAC, OGG
-- 🎬 **Video**: MP4, AVI, MKV, MOV, WMV
-- 📄 **Documents**: PDF, DOC, TXT, XLS, PPT
-- 💾 **Archives**: ZIP, RAR, 7Z, TAR
-- ⚙️ **Programs**: EXE, MSI, DEB, DMG
+#### 🔄 Duplicate Management
+- **Smart duplicate detection**: Files with identical content are detected
+- **Flexible duplicate handling**: Skip, rename, or overwrite options
+- **Safe operations**: Original files are preserved
 
-### Duplicate Detection Methods
-- **Name matching**: Identical filenames
-- **Size comparison**: File size verification
-- **Hash verification**: MD5 checksum comparison
+#### 📁 Category Management
+```
+📁 Organized Files/
+├── 🖼️ Image Files/
+│   ├── .jpg, .png, .gif, .bmp, .svg
+├── 🎥 Video Files/
+│   ├── .mp4, .avi, .mkv, .mov, .wmv
+├── 🎵 Audio Files/
+│   ├── .mp3, .wav, .flac, .aac, .ogg
+├── 📄 Document Files/
+│   ├── .pdf, .doc, .docx, .txt, .xls
+├── 💾 Program Files/
+│   ├── .exe, .msi, .deb, .rpm, .dmg
+├── 🗜️ Compressed Files/
+│   ├── .zip, .rar, .7z, .tar, .gz
+├── 🛠️ CAD & 3D Files/
+│   ├── .dwg, .step, .stl, .obj, .blend
+├── 💻 Code Files/
+│   ├── .py, .js, .html, .css, .java
+├── 🔤 Font Files/
+│   ├── .ttf, .otf, .woff, .woff2
+└── 📦 Software Packages/
+    ├── Installation files and folders
+```
+
+## 🔧 Technical Details
+
+### System Architecture
+- **Modular design**: Each feature developed as a separate module
+- **Thread safety**: Safe thread management for parallel operations
+- **Memory optimization**: Efficient memory usage for large file operations
+- **Error recovery**: Comprehensive error management preventing system crashes
+
+### Performance Features
+- **Parallel copying**: Multiple files processed simultaneously
+- **Smart caching**: Frequently used information is cached
+- **Progressive loading**: Large folder structures are processed incrementally
+- **Resource management**: CPU and memory usage is optimized
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+If you want to contribute to the project:
 
-### Development Setup
-```bash
-git clone https://github.com/anatolianstar/Python-File-Manager.git
-cd Python-File-Manager
-# Make your changes
-git commit -m "Your improvement"
-git push origin main
-```
+1. **Fork** and create your own branch
+2. **Develop features** or fix bugs
+3. **Test** - thoroughly test your changes
+4. **Send pull request** - with detailed description
 
-## 📊 Performance
-
-- **Processing Speed**: 1000+ files per minute
-- **Memory Usage**: < 100MB for typical operations
-- **Supported File Types**: 50+ formats
-- **Platform Support**: Windows, Linux, macOS
-
-## 🐛 Known Issues & Solutions
-
-### ✅ Resolved Issues
-- ~~Duplicate files being copied~~ → Real-time duplicate control added
-- ~~Column sorting instability~~ → Intelligent sorting algorithm implemented
-- ~~Hidden file clutter~~ → Comprehensive filtering system
-
-### 🔄 Planned Improvements
-- Cloud storage integration
-- Batch rename functionality
-- Undo/Redo operations
-- Plugin system for custom categories
+### Development Guide
+- Follow coding standards (PEP 8)
+- Write complete docstrings
+- Add unit tests
+- Use Turkish comments
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is distributed under the MIT license. See the `LICENSE` file for details.
 
-## 🙏 Acknowledgments
+## 🐛 Bug Reporting
 
-- Built with ❤️ using Python and Tkinter
-- Developed through pair programming with Cursor AI
-- Special thanks to the open-source community
+If you find bugs or have suggestions:
+- Use **GitHub Issues**
+- Add **detailed description**
+- Specify **reproducible error steps**
+- Share **your system information**
 
-## 📞 Support
+## 📚 Frequently Asked Questions
 
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/anatolianstar/Python-File-Manager/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/anatolianstar/Python-File-Manager/discussions)
-- 📧 **Contact**: Create an issue for support
+**Q: What operating systems does the program work on?**
+A: It works on Windows, macOS, and Linux. Python 3.7+ is required.
+
+**Q: Can large files be processed?**
+A: Yes, the program efficiently handles large files. Memory usage is optimized.
+
+**Q: Can category settings be customized?**
+A: Yes, both existing categories can be edited and new categories can be added.
+
+**Q: How are duplicate files detected?**
+A: File contents are compared using the MD5 hash algorithm.
+
+**Q: Are original files safe?**
+A: Yes, the program only copies, it doesn't delete original files.
 
 ---
 
-## 🇹🇷 Türkçe Versiyon
+**⭐ Don't forget to star the project if you liked it!**
 
-Bu projenin Türkçe arayüzü de mevcuttur. Ana dizindeki dosyaları kullanarak Türkçe versiyonu çalıştırabilirsiniz.
-
-### Türkçe Kullanım
-```bash
-python main_modular.py
-```
-
-Detaylı Türkçe dokümantasyon için ana README.md dosyasını ziyaret edin.
-
----
-
-⭐ **If you find this project useful, please give it a star!** ⭐ 
+📧 **Contact**: [GitHub Issues](https://github.com/user/smart-file-distribution/issues)
+🐛 **Bug Report**: [Report Bug](https://github.com/user/smart-file-distribution/issues/new)
+💡 **Feature Request**: [Request Feature](https://github.com/user/smart-file-distribution/issues/new) 

@@ -35,14 +35,104 @@
     "open": "Aç",
     "rename": "Yeniden Adlandır",
     "home": "Ana Klasör",
-    "go": "Git"
+    "go": "Git",
+    "analyze": "🔍 Hedef Disk Analizi"
   },
   "labels": {
     "location": "Konum",
     "file_folder_name": "Dosya/Klasör Adı",
     "size": "Boyut",
     "type": "Tür",
-    "modified": "Değiştirilme"
+    "modified": "Değiştirilme",
+    "scan_mode": "Alt klasör tarama modu",
+    "folder_structure": "Klasör Yapısı",
+    "file_count": "Dosya Sayısı",
+    "file_path": "Dosya Yolu"
+  },
+  "panels": {
+    "target_manager": "Hedef Klasör - File Manager",
+    "source_organization": "Kaynak Dosyalar ve Organizasyon Önizleme"
+  },
+  "source_tab": {
+    "title": "Kaynak Dosyalar",
+    "file_name": "Dosya Adı",
+    "size": "Boyut", 
+    "type": "Tür"
+  },
+  "status": {
+    "ready": "Hazır",
+    "folders": "klasör",
+    "files": "dosya",
+    "file_count": "Dosya Sayısı",
+    "folder_count": "Klasör Sayısı"
+  },
+  "categories": {
+    "image_files": "Resim Dosyaları",
+    "document_files": "Belge Dosyaları", 
+    "audio_files": "Ses Dosyaları",
+    "video_files": "Video Dosyaları",
+    "program_files": "Program Dosyaları",
+    "compressed_files": "Sıkıştırılmış Dosyalar",
+    "cad_3d_files": "CAD ve 3D Dosyaları",
+    "code_files": "Kod Dosyaları",
+    "font_files": "Font Dosyaları",
+    "other_files": "Diğer Dosyalar",
+    "ready_programs": "Yazılım Paketleri"
+  },
+  "scan_options": {
+    "scan_all": "✅ Tüm alt klasörleri tara (dosyaları kategorilere ayır)",
+    "copy_folders": "📁 Klasörleri komple kopyala (klasör yapısını koru)",
+    "files_only": "📄 Sadece dosyaları tara (alt klasörleri görmezden gel)",
+    "reminder": "💡 HATIRLATMA:\n• 'Tüm alt klasörleri tara': Tüm dosyaları kategorilere ayırır\n• 'Klasörleri komple kopyala': Klasör yapısını korur\n• 'Sadece dosyaları tara': Alt klasörlerdeki dosyaları görmezden gelir, sadece ana klasördeki dosyaları işler"
+  },
+  "tabs": {
+    "preview": "Organizasyon Önizleme", 
+    "duplicates": "🔄 Duplikat Dosyalar"
+  },
+  "duplicates": {
+    "control_label": "Duplikat Kontrol:",
+    "name": "İsim",
+    "size": "Boyut",
+    "hash": "Hash",
+    "action_label": "Duplikat dosyalar için:",
+    "ask": "Her seferinde sor",
+    "skip": "Otomatik atla",
+    "copy": "Numara ekleyerek taşı",
+    "groups": "🔄 Duplikat Dosya Grupları"
+  },
+  "context_menu": {
+    "open": "🔓 Aç",
+    "open_location": "🔍 Dosya Konumunu Aç",
+    "copy": "📋 Kopyala (Ctrl+C)",
+    "cut": "✂️ Kes (Ctrl+X)",
+    "paste": "📁 Yapıştır (Ctrl+V)",
+    "delete": "🗑️ Sil (Del)",
+    "rename": "✏️ Yeniden Adlandır (F2)",
+    "file_info": "📊 Dosya Bilgileri",
+    "file_hash": "🔄 Dosya Hash",
+    "properties": "📋 Özellikler",
+    "new_folder": "➕ Yeni Klasör",
+    "new_file": "📄 Yeni Dosya",
+    "refresh": "🔄 Yenile (F5)",
+    "folder_properties": "📋 Klasör Özellikleri"
+  },
+  "properties": {
+    "title": "Dosya Özellikleri",
+    "name": "Adı",
+    "path": "Yol",
+    "size": "Boyut",
+    "created": "Oluşturulma",
+    "modified": "Değiştirilme",
+    "accessed": "Erişim",
+    "type": "Tür",
+    "file": "Dosya",
+    "folder": "Klasör",
+    "unknown": "Bilinmiyor",
+    "folder_properties": "Klasör Özellikleri",
+    "folder_name": "Klasör Adı",
+    "full_path": "Tam Yol",
+    "total_size": "Toplam Boyut",
+    "total_items": "Toplam Öğe"
   },
   "messages": {
     "scan_complete": "Tarama tamamlandı! {count} dosya bulundu",
@@ -83,8 +173,111 @@
     "file_hash": "Dosya Hash",
     "file_create_error": "Dosya oluşturulamadı: {error}",
     "folder_properties": "Klasör Özellikleri",
-    "folder_info_error": "Klasör bilgileri alınamadı: {error}"
+    "folder_info_error": "Klasör bilgileri alınamadı: {error}",
+    "source_selected": "Kaynak klasör seçildi: {folder}",
+    "source_cancelled": "Kaynak klasör seçimi iptal edildi.",
+    "target_changed": "Hedef klasör değiştirildi: {folder}",
+    "target_cancelled": "Hedef klasör seçimi iptal edildi.",
+    "folder_copied": "Klasör kopyalandı: {name}",
+    "file_copied": "Dosya kopyalandı: {name}",
+    "organization_starting": "📂 Organizasyon başladı! Lütfen kopyalama sırasında programı kapatmayın.",
+    "organization_progress": "İşleniyor: {current}/{total} - Programı kapatmayın!",
+    "creating_folders": "Klasörler oluşturuluyor...",
+    "copying_files": "Dosyalar kopyalanıyor...",
+    "processing_file": "Normal dosya işleniyor: {name}, uzantı: {ext}, is_folder: {is_folder}",
+    "processing_folder": "Klasör '{category}' kategorisine yerleştirilecek: {name}",
+    "searching_folder": "{ext} uzantısı için uygun klasör aranıyor...",
+    "no_folder_found": "{ext} için uygun klasör bulunamadı - yeni klasör oluşturulacak",
+    "placing_in_category": "{ext} dosyaları yeni kategori klasörüne yerleştirilecek: {path}",
+    "copying_to_existing": "Mevcut klasöre dosya kopyalanıyor: {path}",
+    "full_folder_path": "Tam klasör yolu: {path}",
+    "target_folder_not_found": "Hedef klasör bulunamadı: {path}",
+    "target_folder_created": "Hedef klasör oluşturuldu: {path}",
+    "target_folder_create_error": "Hedef klasör oluşturulamadı: {error}",
+    "copied_to_existing": "Mevcut klasöre kopyalandı: {file} -> {path}",
+    "existing_copy_error": "Mevcut klasör kopyalama hatası: {file} - {error}",
+    "existing_file_error": "Mevcut klasör dosya hatası: {file} - {error}",
+    "entering_folder": "Klasöre giriliyor: {path}",
+    "application_closed": "Uygulama kapatıldı",
+              "organizer_ready": "Modüler dosya organizatörü hazır! Kaynak klasör seçerek başlayın.",
+    "ready_to_copy": "{count} dosya kopyalanmaya hazır.",
+    "scanning": "Taranıyor",
+    "files_scanned": "dosya tarandı",
+    "unique": "unique",
+    "duplicate": "duplikat",
+    "unique_files": "Unique dosya",
+    "copied": "Kopyalanan",
+    "skipped": "Atlanan",
+    "errors": "Hata",
+    "duplicate_group": "Duplikat Grup",
+    "files_lowercase": "dosya",
+    "categories_learned": "🎓 Yeni kategoriler öğrenildi - Organizasyon güncelleniyor",
+    "category_changed": "🎓 Kategori değiştirildi: {extension} artık {category} kategorisinde",
+    "extension_learned": "🎓 Yeni uzantı öğrenildi: {extension} -> {category}",
+    "folder_learning": "📖 {count} uzantı klasör içeriğinden öğrenildi"
   },
+  "time": {
+    "completed": "Tamamlandı!",
+    "remaining": "Kalan süre",
+    "calculating": "Hesaplanıyor...",
+    "files": "dosya",
+    "seconds": "saniye",
+    "minutes_short": "dk",
+    "seconds_short": "sn",
+    "hours_short": "sa"
+  },
+    "reports": {
+      "analysis": {
+        "title": "🔍 Hedef Disk Analizi Raporu",
+        "general_stats": "📊 GENEL İSTATİSTİKLER",
+        "source_folder": "Kaynak klasör",
+        "target_folder": "Hedef klasör", 
+        "scan_date": "Tarama tarihi",
+        "total_source_files": "Toplam kaynak dosya",
+        "files_to_copy": "Kopyalanacak dosya",
+        "existing_files": "Zaten mevcut dosya",
+        "duplicate_files": "Duplikat dosya",
+        "size_info": "💾 BOYUT BİLGİLERİ",
+        "total_copy_size": "Kopyalanacak toplam boyut",
+        "existing_size": "Mevcut dosya boyutu",
+        "disk_analysis": "💿 DİSK ALANI ANALİZİ",
+        "total_disk_space": "Toplam disk alanı",
+        "used_space": "Kullanılan alan",
+        "free_space": "Boş alan",
+        "required_space": "Gerekli alan",
+        "sufficient_space": "✅ Yeterli alan var! Kalan",
+        "insufficient_space": "❌ Yetersiz alan! Eksik",
+        "category_analysis": "📁 KATEGORİ BAZLI ANALİZ",
+        "to_copy": "Kopyalanacak",
+        "existing": "Mevcut",
+        "organization_structure": "📂 DETAYLI ORGANİZASYON YAPISI",
+        "duplicate_analysis": "🔄 DUPLİKAT DOSYA ANALİZİ",
+        "total_duplicate_groups": "Toplam duplikat grup",
+        "total_duplicate_files": "Toplam duplikat dosya",
+        "suggestions": "💡 ÖNERİLER",
+        "all_files_exist": "✅ Tüm dosyalar zaten hedef klasörde mevcut.",
+        "insufficient_disk": "⚠️ Disk alanı yetersiz! Önce yer açın veya gereksiz dosyaları silin.",
+        "duplicates_found": "🔄 {count} duplikat dosya tespit edildi. İncelemeniz önerilir.",
+        "report_end": "Rapor sonu - Dosya Organizatörü v2.0"
+      },
+      "duplicate": {
+        "title": "🔄 Duplikat Dosya Raporu",
+        "no_duplicates": "Duplikat dosya bulunamadı!",
+        "save_report": "📄 Raporu Kaydet",
+        "close": "❌ Kapat",
+        "group": "📁 GRUP",
+        "file_name": "Dosya adı",
+        "size": "Boyut",
+        "extension": "Uzantı",
+        "locations": "Dosya konumları",
+        "report_date": "Rapor tarihi"
+      },
+      "save": {
+        "title": "Raporu Kaydet", 
+        "success": "Rapor başarıyla kaydedildi",
+        "error": "Rapor kaydedilemedi"
+      }
+    },
     "dialogs": {
     "error": {
       "title": "Hata"
@@ -95,6 +288,12 @@
     "info": {
       "title": "Bilgi"
     },
+    "exit": {
+      "title": "Çıkış",
+      "message": "Uygulamadan çıkmak istediğinizden emin misiniz?"
+    },
+    "select_source": "Kaynak Klasör Seçin",
+    "select_target": "Hedef SSD Seçin",
     "folder_conflict": {
       "title": "Klasör Çakışması",
       "message": "'{folder}' klasörü zaten mevcut!",
@@ -109,6 +308,25 @@
       "skip": "Atla",
       "overwrite_all": "Tümünü Yaz",
       "skip_all": "Tümünü Atla"
+    },
+    "duplicate_found": {
+      "title": "Duplikat Dosya Bulundu",
+      "message": "Duplikat dosya bulundu",
+      "total_count": "Toplam {count} duplikat dosya var",
+      "question": "Ne yapmak istiyorsunuz?",
+      "skip_this": "Bu dosyayı atla",
+      "copy_this": "Bu dosyayı kopyala",
+      "skip_all": "Tümünü atla",
+      "copy_all": "Tümünü kopyala"
+    },
+    "organization_confirm": {
+      "title": "Organizasyon Onayı",
+      "message": "Organizasyon başlatılacak",
+      "statistics": "İstatistikler",
+      "unique_files_to_copy": "unique dosya kopyalanacak",
+      "duplicate_files_found": "duplikat dosya var",
+      "target": "Hedef",
+      "question": "Devam etmek istediğinizden emin misiniz?"
     }
   }
 }

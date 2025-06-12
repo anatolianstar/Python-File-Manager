@@ -1,188 +1,179 @@
-# 🗂️ Advanced Python File Manager v3.0
+# 🗂️ Akıllı Dublicate Kontrollü Dosya Dağıtım Programı
 
-[![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue.svg)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](https://github.com)
+[🇬🇧 English](README_EN.md) | 🇹🇷 Türkçe
 
-**Gelişmiş, modüler ve çok dilli dosya yönetim sistemi**
+**Gelişmiş dosya organizasyon ve dağıtım aracı** - Dosyalarınızı akıllı kategorizasyon ve dublicate kontrolü ile otomatik olarak organize eder.
 
-## 🚀 **Versiyon 3.0 - Yeni Özellikler**
+## 🌟 Program Özellikleri
 
-### 🌍 **Multi-Language Support**
-- **Dinamik dil değiştirme** - Program açıkken dil değiştir
-- **JSON-based i18n** - Kolay çeviri sistemi
-- **Otomatik fallback** - Eksik çeviri koruması
-- **GUI dil seçici** - Tek tıkla dil değişimi
+### 🧠 Akıllı Kategorizasyon Sistemi
+- **Otomatik dosya sınıflandırması**: 15+ farklı kategori (resim, video, audio, doküman, program dosyaları vb.)
+- **Öğrenen sistem**: Kullanıcı tercihlerini hatırlar ve öğrenir
+- **Hedef odaklı kategorizasyon**: Belirli klasör yapılarına göre özelleşen kategoriler
+- **Esnek kategori yönetimi**: Yeni kategoriler ekleyebilme ve mevcut kategorileri düzenleyebilme
 
-### 🧠 **Smart Category Learning**
-- **Kullanıcı davranışlarını öğrenme** - Dosya taşıma tercihlerini hatırlama
-- **Otomatik kategori önerisi** - Öğrenilen tercihlere göre organizasyon
-- **JSON-based hafıza** - Öğrenilen bilgilerin kalıcı saklanması
+### 🔍 Dublicate Kontrolü ve Güvenlik
+- **MD5 hash tabanlı dublicate kontrolü**: Aynı içeriğe sahip dosyaları tespit eder
+- **Güvenli kopyalama**: Dosya bütünlüğünü korur
+- **Çakışma önleme**: Aynı isimli farklı dosyalar otomatik olarak yeniden adlandırılır
+- **Hata toleransı**: Başarısız operasyonlar sistemi durdurmaz
 
-### 🔄 **Advanced Folder Merging**
-- **Akıllı klasör birleştirme** - Aynı isimli klasörleri otomatik birleştir
-- **Çakışma çözümü** - Dosya ve klasör çakışmalarını yönet
-- **Global işlem modları** - Tümünü atla/yaz seçenekleri
+### ⚡ Performans ve Kullanıcı Deneyimi
+- **Paralel işlemler**: Çoklu thread desteği ile hızlı kopyalama
+- **Gerçek zamanlı ilerleme takibi**: Tüm alt klasörler dahil doğru ilerleme gösterimi
+- **Detaylı operasyon raporları**: Başarılı, atlanan ve başarısız operasyonların detayları
+- **Kullanıcı dostu arayüz**: Türkçe menü ve mesajlar
+- **Geniş dosya format desteği**: 100+ dosya uzantısı desteği
 
-### 🛡️ **Secure File Operations**
-- **Multi-stage verification** - Kopyala→Doğrula→Sil→Onayla
-- **Dosya kaybı koruması** - Güvenli taşıma sistemi
-- **Detaylı progress tracking** - İşlem durumu takibi
+### 📁 Klasör İşlemleri
+- **Derin klasör yapısı desteği**: Alt klasörler dahil tam organizasyon
+- **Klasör birleştirme**: Aynı kategorideki klasörler otomatik birleştirilir
+- **Yapı koruma**: Önemli klasör yapıları korunur
+- **Seçici organizasyon**: Belirli dosya türlerini organize etme seçeneği
 
-## 📦 **Kurulum**
+## 🛠️ Kurulum
 
 ### Gereksinimler
-```bash
-Python 3.7+
-tkinter (genellikle Python ile birlikte gelir)
-```
+- Python 3.7 veya üzeri
+- tkinter (genellikle Python ile birlikte gelir)
+- threading, shutil, hashlib (standart kütüphaneler)
 
 ### Kurulum Adımları
-```bash
-# Repository'yi klonla
-git clone https://github.com/USERNAME/Python-File-Manager.git
-cd Python-File-Manager
+1. **Projeyi indirin:**
+   ```bash
+   git clone https://github.com/[YOUR_USERNAME]/Python-File-Manager.git
+   cd Python-File-Manager
+   ```
 
-# Programı çalıştır
-python main_modular.py
+2. **Programı çalıştırın:**
+   ```bash
+   python main_modular.py
+   ```
+
+## 🚀 Kullanım Kılavuzu
+
+### Ana Özellikler
+
+#### 1. 📋 Dosya Tarama ve Seçim
+- **Klasör seçimi**: Organize edilecek kaynak klasörünü seçin
+- **Dosya filtreleme**: Belirli dosya türlerini seçerek organize edin
+- **Önizleme**: Hangi dosyaların nereye gideceğini önceden görün
+
+#### 2. 🎯 Hedef Klasör Ayarları
+- **Hedef konumu seçin**: Dosyaların organize edileceği klasörü belirleyin
+- **Kategori yapısı**: Otomatik oluşturulan kategori klasörlerini önizleyin
+- **Özelleştirilmiş organizasyon**: İhtiyaçlarınıza göre kategori ayarları
+
+#### 3. ⚙️ Organize İşlemi
+- **Tek tıkla organizasyon**: "Organize Et" butonuna basın
+- **İlerleme takibi**: Gerçek zamanlı ilerleme çubuğu ve detay bilgileri
+- **Hata yönetimi**: Başarısız işlemler otomatik olarak raporlanır
+
+#### 4. 📊 Sonuç Raporları
+- **Detaylı istatistikler**: Kopyalanan, atlanan ve başarısız dosya sayıları
+- **Kategori dağılımı**: Hangi kategoriye kaç dosya yerleştirildiği
+- **Hata analizi**: Başarısız operasyonların sebepleri
+
+### Gelişmiş Özellikler
+
+#### 🎓 Öğrenen Sistem
+Program, kullanıcı tercihlerini öğrenir ve gelecekteki organizasyonlarda bu bilgileri kullanır:
+- Manuel kategori atamalarını hatırlar
+- Sık kullanılan klasör yapılarını tanır
+- Dosya türü tercihleri kaydedilir
+
+#### 🔄 Dublicate Yönetimi
+- **Akıllı dublicate tespiti**: Aynı içeriğe sahip dosyalar tespit edilir
+- **Esnek dublicate işleme**: Atla, yeniden adlandır veya üzerine yaz seçenekleri
+- **Güvenli işlemler**: Orijinal dosyalar korunur
+
+#### 📁 Kategori Yönetimi
+```
+📁 Organize Edilmiş Dosyalar/
+├── 🖼️ Resim Dosyaları/
+│   ├── .jpg, .png, .gif, .bmp, .svg
+├── 🎥 Video Dosyaları/
+│   ├── .mp4, .avi, .mkv, .mov, .wmv
+├── 🎵 Audio Dosyaları/
+│   ├── .mp3, .wav, .flac, .aac, .ogg
+├── 📄 Doküman Dosyaları/
+│   ├── .pdf, .doc, .docx, .txt, .xls
+├── 💾 Program Dosyaları/
+│   ├── .exe, .msi, .deb, .rpm, .dmg
+├── 🗜️ Sıkıştırılmış Dosyalar/
+│   ├── .zip, .rar, .7z, .tar, .gz
+├── 🛠️ CAD & 3D Dosyaları/
+│   ├── .dwg, .step, .stl, .obj, .blend
+├── 💻 Kod Dosyaları/
+│   ├── .py, .js, .html, .css, .java
+├── 🔤 Font Dosyaları/
+│   ├── .ttf, .otf, .woff, .woff2
+└── 📦 Yazılım Paketleri/
+    ├── Kurulum dosyaları ve klasörleri
 ```
 
-## 🎯 **Kullanım**
+## 🔧 Teknik Detaylar
 
-### Temel İşlemler
-1. **Kaynak klasör seç** - Organize edilecek dosyalar
-2. **Hedef klasör seç** - Dosyaların organize edileceği yer
-3. **Dosyaları tara** - Kategori analizi
-4. **Organizasyonu başlat** - Otomatik düzenleme
+### Sistem Mimarisi
+- **Modüler tasarım**: Her özellik ayrı modül olarak geliştirilmiş
+- **Thread güvenliği**: Paralel işlemler için güvenli thread yönetimi
+- **Bellek optimizasyonu**: Büyük dosya işlemleri için verimli bellek kullanımı
+- **Hata kurtarma**: Sistem çökmelerini önleyen kapsamlı hata yönetimi
 
-### Dil Değiştirme
-```python
-from lang_manager import set_language, t
+### Performans Özellikleri
+- **Paralel kopyalama**: Çoklu dosya aynı anda işlenir
+- **Akıllı önbellekleme**: Sık kullanılan bilgiler önbelleğe alınır
+- **Progresif yükleme**: Büyük klasör yapıları kademeli olarak işlenir
+- **Kaynak yönetimi**: CPU ve bellek kullanımı optimize edilmiştir
 
-# Dil değiştir
-set_language('en')  # English
-set_language('tr')  # Türkçe
+## 🤝 Katkıda Bulunma
 
-# Metin al
-button_text = t('buttons.scan')
-```
+Projeye katkıda bulunmak istiyorsanız:
 
-## 🏗️ **Proje Yapısı**
+1. **Fork yapın** ve kendi branch'inizi oluşturun
+2. **Özellik geliştirin** veya bug düzeltmesi yapın
+3. **Test edin** - değişikliklerinizi kapsamlı olarak test edin
+4. **Pull request gönderin** - detaylı açıklama ile birlikte
 
-```
-File-Manager/
-├── 📁 Core System
-│   ├── main_modular.py          # Ana program
-│   ├── file_operations.py       # Dosya işlemleri
-│   ├── scan_engine.py          # Tarama motoru
-│   ├── gui_manager.py          # GUI yönetimi
-│   └── reporting.py            # Raporlama
-├── 📁 Multi-Language
-│   ├── lang_manager.py         # Dil yönetimi
-│   ├── language_switcher.py    # GUI dil seçici
-│   └── languages/              # Dil dosyaları
-│       ├── tr.json            # Türkçe
-│       └── en.json            # English
-└── 📁 Settings
-    ├── language_settings.json  # Dil tercihleri
-    └── learned_categories.json # Öğrenilen kategoriler
-```
+### Geliştirme Rehberi
+- Kod standartlarına uyun (PEP 8)
+- Docstring'leri eksiksiz yazın
+- Unit test'ler ekleyin
+- Türkçe yorum satırları kullanın
 
-## 🔧 **Özellikler**
+## 📝 Lisans
 
-### 📂 **Dosya Kategorileri**
-- **Görüntüler**: JPG, PNG, GIF, BMP, TIFF, WebP
-- **Videolar**: MP4, AVI, MKV, MOV, WMV, FLV
-- **Sesler**: MP3, WAV, FLAC, AAC, OGG
-- **Belgeler**: PDF, DOCX, XLSX, PPTX, TXT
-- **Kod Dosyaları**: PY, JS, HTML, CSS, JSON
-- **3D/CAD**: STL, OBJ, 3MF, STEP, IGES
-- **Arşivler**: ZIP, RAR, 7Z, TAR, GZ
+Bu proje MIT lisansı altında dağıtılmaktadır. Detaylar için `LICENSE` dosyasına bakınız.
 
-### 🎨 **GUI Özellikleri**
-- **Modern arayüz** - Tkinter tabanlı
-- **Drag & Drop** - Dosya sürükle bırak
-- **Progress bar** - İşlem durumu
-- **Dil seçici** - Dinamik dil değişimi
-- **Çakışma diyalogları** - Kullanıcı tercihi
+## 🐛 Hata Bildirimi
 
-### 🧠 **Akıllı Özellikler**
-- **Kategori öğrenme** - Kullanıcı davranışlarını analiz
-- **Otomatik öneriler** - Öğrenilen tercihlere göre
-- **Hata toleransı** - Güvenli dosya işlemleri
-- **Esnek konfigürasyon** - JSON tabanlı ayarlar
+Hata bulursanız veya öneriniz varsa:
+- **GitHub Issues** bölümünü kullanın
+- **Detaylı açıklama** ekleyin
+- **Hata tekrarlanabilir adımlar** belirtin
+- **Sistem bilgilerinizi** paylaşın
 
-## 🌐 **Desteklenen Diller**
+## 📚 Sık Sorulan Sorular
 
-| Dil | Kod | Durum |
-|-----|-----|-------|
-| 🇹🇷 Türkçe | `tr` | ✅ Tam destek |
-| 🇺🇸 English | `en` | ✅ Tam destek |
-| 🇩🇪 Deutsch | `de` | 🚧 Planlanan |
-| 🇫🇷 Français | `fr` | 🚧 Planlanan |
+**Q: Program hangi işletim sistemlerinde çalışır?**
+A: Windows, macOS ve Linux'te çalışır. Python 3.7+ gereklidir.
 
-## 🔄 **Versiyon Geçmişi**
+**Q: Büyük dosyalar işlenebilir mi?**
+A: Evet, program büyük dosyaları verimli şekilde işler. Bellek kullanımı optimize edilmiştir.
 
-### v3.0 (2024)
-- ✨ Multi-language support
-- 🧠 Smart category learning
-- 🔄 Advanced folder merging
-- 🛡️ Secure file operations
-- 🎨 Modern GUI improvements
+**Q: Kategori ayarları özelleştirilebilir mi?**
+A: Evet, hem mevcut kategoriler düzenlenebilir hem de yeni kategoriler eklenebilir.
 
-### v2.0 (2024)
-- 📂 Modular architecture
-- 🏗️ Enhanced file operations
-- 📊 Advanced reporting
-- 🎯 Better categorization
+**Q: Dublicate dosyalar nasıl tespit edilir?**
+A: MD5 hash algoritması kullanılarak dosya içerikleri karşılaştırılır.
 
-### v1.0 (2024)
-- 🚀 Initial release
-- 📁 Basic file organization
-- 🖥️ Simple GUI interface
-
-## 🤝 **Katkıda Bulunma**
-
-1. **Fork** the repository
-2. **Create** feature branch (`git checkout -b feature/amazing-feature`)
-3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-4. **Push** to the branch (`git push origin feature/amazing-feature`)
-5. **Open** a Pull Request
-
-## 📝 **Yeni Dil Ekleme**
-
-```python
-# Yeni dil dosyası oluştur
-from lang_manager import lang_manager
-
-# Almanca dil dosyası oluştur
-german_texts = {
-    "app": {"title": "Datei-Organizer"},
-    "buttons": {"scan": "Dateien scannen"}
-    # ... diğer çeviriler
-}
-
-lang_manager.create_language_file('de', german_texts)
-```
-
-## 🐛 **Bilinen Sorunlar**
-
-- Windows'ta uzun dosya yolu sınırlaması
-- Çok büyük dosyalarda (>2GB) yavaşlama
-- Bazı özel karakterlerde encoding sorunu
-
-## 📄 **Lisans**
-
-Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
-
-## 📞 **Destek**
-
-- 🐛 **Bug Report**: GitHub Issues
-- 💡 **Feature Request**: GitHub Discussions
-- 📧 **İletişim**: GitHub Profile
+**Q: Orijinal dosyalar güvende mi?**
+A: Evet, program sadece kopyalama yapar, orijinal dosyaları silmez.
 
 ---
 
-**⭐ Projeyi beğendiyseniz yıldız verin!**
+**⭐ Projeyi beğendiyseniz yıldız vermeyi unutmayın!**
 
-Made with ❤️ by [Your Name]
+📧 **İletişim**: [GitHub Issues](https://github.com/[YOUR_USERNAME]/Python-File-Manager/issues)
+🐛 **Bug Report**: [Hata Bildirimi](https://github.com/[YOUR_USERNAME]/Python-File-Manager/issues/new)
+💡 **Feature Request**: [Özellik Önerisi](https://github.com/[YOUR_USERNAME]/Python-File-Manager/issues/new)

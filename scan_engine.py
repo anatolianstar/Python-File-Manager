@@ -7,10 +7,12 @@ import os
 import hashlib
 import threading
 import time
+import traceback
 from pathlib import Path
 from collections import defaultdict
 import tkinter as tk
 from tkinter import messagebox
+from lang_manager import lang_manager
 
 class ScanEngine:
     def __init__(self, gui_manager, file_operations):
@@ -42,63 +44,59 @@ class ScanEngine:
         
     def scan_files(self):
         """Ana tarama fonksiyonu"""
-        if not self.gui.source_var.get():
-            messagebox.showwarning("Uyarı", "Önce kaynak klasör seçin!")
+
+        if not self.file_ops.source_path:
+            messagebox.showwarning(lang_manager.get_text('warnings.warning'), 
+                                 lang_manager.get_text('warnings.select_source_first'))
             return
-        
-        if self.scan_thread and self.scan_thread.is_alive():
-            messagebox.showwarning("Uyarı", "Tarama zaten devam ediyor!")
+            
+        if not self.file_ops.target_path:
+            messagebox.showwarning(lang_manager.get_text('warnings.warning'), 
+                                 lang_manager.get_text('warnings.select_target_first'))
             return
+            
+        # Progress bar'ı göster
+        self.gui.progress_var.set(0)
+        if hasattr(self.gui, 'progress_label'):
+            self.gui.progress_label.config(text=lang_manager.get_text('messages.starting_scan'))
         
-        # Thread başlat
-        self.stop_scanning = False
-        self.scan_thread = threading.Thread(target=self._scan_thread, daemon=True)
+        # Thread'de tarama başlat
+        self.scan_thread = threading.Thread(target=self._scan_thread)
+        self.scan_thread.daemon = True
         self.scan_thread.start()
     
     def _scan_thread(self):
         """Tarama thread'i"""
         try:
-            # Progress başlat
-            self.gui.progress_var.set(0)
-            self.gui.status_var.set("Tarama başlatılıyor...")
+            self.stop_scanning = False
+            self.gui.root.after(0, lambda: self.gui.status_var.set(lang_manager.get_text('messages.scanning_files')))
             
             # Time estimation başlat
-            self.gui.start_time_estimation()
+            self.gui.root.after(0, lambda: self.gui.start_time_estimation())
             
-            # Kaynak klasörü tara
-            source_path = self.gui.source_var.get()
-            scan_mode = self.gui.scan_mode.get()  # Yeni: scan_mode değişkenini al
-            
-            if not source_path or not os.path.exists(source_path):
-                self.gui.root.after(0, lambda: self.gui.status_var.set("❌ Geçerli bir kaynak klasör seçin"))
-                return
-            
-            self._scan_source_files(source_path, scan_mode)
+            # Dosyaları tara
+            self._scan_source_files(self.file_ops.source_path, self.gui.scan_mode.get())
             
             if not self.stop_scanning:
-                # Duplikat tespiti
-                self.gui.root.after(0, lambda: self.gui.status_var.set("Duplikat dosyalar tespit ediliyor..."))
+                # Duplikatları tespit et
                 self._detect_duplicates()
                 
-                if not self.stop_scanning:
-                    # Organizasyon yapısı oluştur
-                    self.gui.root.after(0, lambda: self.gui.status_var.set("Organizasyon yapısı oluşturuluyor..."))
-                    self._create_organization_structure()
-                    
-                    if not self.stop_scanning:
-                        # Sonuçları güncelle
-                        self._update_scan_results()
-                        
-                        # İstatistikleri göster
-                        self._show_scan_statistics()
+                # Organizasyon yapısını oluştur
+                self._create_organization_structure()
+                
+                # Sonuçları güncelle
+                self._update_scan_results()
+                
+            # Time estimation durdur
+            self.gui.root.after(0, lambda: self.gui.stop_time_estimation())
             
         except Exception as e:
-            self.gui.root.after(0, lambda: self.gui.status_var.set(f"❌ Tarama hatası: {e}"))
-            print(f"Tarama hatası: {e}")
-        finally:
-            # Progress sıfırla ve time estimation durdur
-            self.gui.root.after(0, lambda: self.gui.progress_var.set(0))
+            # Time estimation durdur (hata durumunda da)
             self.gui.root.after(0, lambda: self.gui.stop_time_estimation())
+            
+            error_msg = f"Tarama hatası: {str(e)}"
+            self.gui.root.after(0, lambda: self.gui.status_var.set(error_msg))
+            self.gui.root.after(0, lambda: messagebox.showerror("Hata", error_msg))
     
     def _scan_source_files(self, source_path, scan_mode):
         """Kaynak dosyaları tara"""
@@ -154,7 +152,7 @@ class ScanEngine:
                         self.all_scanned_files.append(folder_info)
                         self.stats['total_files'] += 1
                         self.stats['total_size'] += folder_info['size']
-                        self.stats['categories']['Klasörler'] += 1
+                        self.stats['categories']['Yazılım Paketleri'] += 1
                         
             except PermissionError:
                 pass
@@ -204,7 +202,8 @@ class ScanEngine:
                 
                 # Status güncelle
                 if i % 50 == 0:
-                    self.gui.root.after(0, lambda: self.gui.status_var.set(f"Taranıyor: {i+1}/{total_files}"))
+                    from lang_manager import t
+                    self.gui.root.after(0, lambda: self.gui.status_var.set(f"{t('messages.scanning')}: {i+1}/{total_files}"))
                 
                 # UI donmasını önle
                 if i % 100 == 0:
@@ -366,20 +365,51 @@ class ScanEngine:
             return None
     
     def _create_organization_structure(self):
-        """Organizasyon yapısını oluştur"""
-        # Yapıları temizle ve yeniden başlat
+        """Organizasyon yapısını oluştur - GELİŞTİRİLMİŞ SÜRÜM"""
+
+        
         self.organization_structure = defaultdict(lambda: defaultdict(list))
-        
-        # SORUN ÇÖZÜMÜ: Önceki mevcut klasör analizini temizle
-        if hasattr(self, 'existing_folder_files'):
-            self.existing_folder_files.clear()
-        else:
-            self.existing_folder_files = {}
-        
-        print("🔄 Organizasyon yapısı temizlendi ve yeniden başlatılıyor...")
+        self.existing_folder_files = defaultdict(list)
         
         # Hedef klasör analizi
         target_folder_analysis = self._analyze_target_folders()
+        # Target folder analysis completed
+        
+        # TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından öğren
+        print("🔍 TARAMA SIRASI ÖĞRENME BAŞLATILIYOR...")
+        
+        # 🧪 TEST AMAÇLI: Zorla öğrenme ekle
+        print("🧪 TEST: Zorla öğrenme testi yapılıyor...")
+        if not hasattr(self.file_ops, 'learned_categories'):
+            self.file_ops.learned_categories = {}
+        
+        # Test uzantısı ekle - her seferinde farklı olsun
+        import time
+        test_ext = f'.test_{int(time.time() % 1000)}'
+        self.file_ops.learned_categories[test_ext] = 'test_category'
+        print(f"🧪 TEST öğrenme eklendi: {test_ext} -> test_category")
+        
+        # 🎯 GCODE ÖZEL DÜZELTMESİ: GCODE uzantısını CAD kategorisine ekle
+        if '.gcode' not in self.file_ops.learned_categories:
+            self.file_ops.learned_categories['.gcode'] = 'cad_3d_files'
+            print("🎯 GCODE DÜZELTMESİ: .gcode -> cad_3d_files eklendi")
+        
+        learning_made = self._learn_from_existing_structure(target_folder_analysis)
+        
+        # Zorla öğrenme varsa True döndür
+        if test_ext in self.file_ops.learned_categories or '.gcode' in self.file_ops.learned_categories:
+            learning_made = True
+            print(f"🧪 TEST: Zorla öğrenme tespit edildi - learning_made = True")
+        
+        print("🔍 TARAMA SIRASI ÖĞRENME TAMAMLANDI.")
+        
+        # EĞER ÖĞRENİLEN VAR İSE JSON'I GÜNCELLE VE ORGANİZASYONU YENİDEN HESAPLA
+        if learning_made:
+            print("🔄 Yeni öğrenmeler tespit edildi - JSON güncelleniyor ve organizasyon yeniden hesaplanıyor...")
+            self.file_ops.save_learned_categories()
+            self.file_ops.load_learned_categories()  # Fresh reload
+            print("📚 JSON güncellendi ve yeniden yüklendi")
+            self.gui.status_var.set(lang_manager.get_text('messages.categories_learned'))
         
         # Progress başlat
         self.gui.root.after(0, lambda: self.gui.progress_var.set(0))
@@ -393,41 +423,77 @@ class ScanEngine:
             progress = (i + 1) / total_files * 100
             self.gui.root.after(0, lambda p=progress: self.gui.progress_var.set(p))
             
-            # Klasör değilse dosya kategorileştir
-            if not file_info.get('is_folder', False):
-                # Kategori belirle - ÖĞRENİLEN KATEGORİLERİ KULLAN
+            # KLASÖR İŞLEMİ: is_folder=True olanlar "Software Packages" kategorisine git
+            if file_info.get('is_folder', False):
+                # Klasörler sadece duplicate tarama için "Software Packages" kategorisine yerleştirilir
+                software_category = lang_manager.get_text('categories.ready_programs')
+                print(f"📁 {lang_manager.get_text('messages.processing_folder').format(category=software_category, name=file_info['name'])}")
+                
+                # Software Packages kategorisi - alt klasör kullanmadan direkt klasör adı ile
+                software_packages_folder = "Software Packages"  # Sabit İngilizce klasör adı
+                if software_packages_folder not in self.organization_structure:
+                    self.organization_structure[software_packages_folder] = defaultdict(list)
+                
+                # Klasörü direkt ana kategori altına koy
+                self.organization_structure[software_packages_folder][''].append(file_info)
+                continue
+            
+            # DOSYA İŞLEMİ: Normal dosyalar için uzantı bazlı kategori 
+            extension = file_info['extension']
+            print(f"🔧 {lang_manager.get_text('messages.processing_file').format(name=file_info['name'], ext=extension, is_folder=file_info.get('is_folder', False))}")
+            
+            # ÖNCELİK 1: Öğrenilen kategoriyi kontrol et
+            learned_info = self.file_ops._check_learned_category_for_scan(extension)
+            
+            if learned_info and isinstance(learned_info, dict):
+                # Öğrenilen kategori var - bu en yüksek öncelik
+                category_folder = learned_info['folder']  # İngilizce kategori klasörü
+                confidence = learned_info['confidence']
+                
+                # Kategori adını çevir
+                translated_category = self._get_translated_category_name(category_folder)
+                print(f"🎯 {extension} uzantısı TARGET LEARNING ile yerleştirilecek: {translated_category} (confidence: {confidence}%)")
+                
+                # Organization structure'a ekle
+                if category_folder not in self.organization_structure:
+                    self.organization_structure[category_folder] = defaultdict(list)
+                
+                # Alt klasör - uzantı adı
+                subfolder = extension.replace('.', '').upper() if extension else 'Uzantisiz'
+                self.organization_structure[category_folder][subfolder].append(file_info)
+                
+                continue
+            
+            # ÖNCELİK 2: Mevcut klasörleri kontrol et  
+            suggested_folder = self._find_suitable_target_folder(extension, target_folder_analysis)
+            
+            if suggested_folder:
+                # Mevcut klasör bulundu
+                print(f"📁 {lang_manager.get_text('messages.placing_in_category').format(ext=extension, path=suggested_folder)}")
+                
+                if suggested_folder not in self.existing_folder_files:
+                    self.existing_folder_files[suggested_folder] = []
+                
+                self.existing_folder_files[suggested_folder].append(file_info)
+                
+            else:
+                # ÖNCELİK 3: Standart kategori kullan - yeni klasör oluştur
                 category, category_info = self.file_ops.get_file_category_with_learning(file_info['path'])
-                extension = file_info['extension']
+                main_folder = category_info['folder']
                 
-                # Hedef klasörde uygun klasör var mı kontrol et
-                suggested_folder = self._find_suitable_target_folder(extension, target_folder_analysis)
-                
-                if suggested_folder:
-                    # Mevcut klasör bulundu - doğrudan o klasöre yerleştir
-                    print(f"📁 {extension} dosyaları mevcut klasöre yerleştirilecek: {suggested_folder}")
-                    
-                    # Mevcut klasör için özel işaretleme
-                    if suggested_folder not in self.existing_folder_files:
-                        self.existing_folder_files[suggested_folder] = []
-                    
-                    self.existing_folder_files[suggested_folder].append(file_info)
-                    
+                # Alt klasör
+                if extension in category_info['subfolders']:
+                    subfolder = category_info['subfolders'][extension]
                 else:
-                    # Standart kategori kullan - yeni klasör oluştur
-                    main_folder = category_info['folder']
-                    
-                    # Alt klasör
-                    if extension in category_info['subfolders']:
-                        subfolder = category_info['subfolders'][extension]
-                    else:
-                        subfolder = extension.replace('.', '').upper() if extension else 'Uzantisiz'
-                    
-                    print(f"📁 {extension} dosyaları yeni kategori klasörüne yerleştirilecek: {main_folder}/{subfolder}")
-                    self.organization_structure[main_folder][subfolder].append(file_info)
+                    subfolder = extension.replace('.', '').upper() if extension else 'Uzantisiz'
+                
+                print(f"📁 {lang_manager.get_text('messages.placing_in_category').format(ext=extension, path=f'{main_folder}/{subfolder}')}")
+                self.organization_structure[main_folder][subfolder].append(file_info)
         
         # Progress tamamla
         self.gui.root.after(0, lambda: self.gui.progress_var.set(100))
     
+
     def _analyze_target_folders(self):
         """Hedef klasördeki mevcut klasörleri analiz et (gelişmiş versiyon)"""
         target_path = self.file_ops.target_path
@@ -435,9 +501,20 @@ class ScanEngine:
         folder_analysis = {}
         
         if not os.path.exists(target_path):
+            print(f"❌ DEBUG: Target path yoksa: {target_path}")
             return folder_analysis
         
         print("🔍 Gelişmiş hedef klasör analizi başlatılıyor...")
+        print(f"🔍 DEBUG: target_path = {target_path}")
+        print(f"🔍 DEBUG: source_path = {source_path}")
+        
+        # Target path içeriğini listele
+        try:
+            target_contents = os.listdir(target_path)
+            print(f"🔍 DEBUG: Target path içeriği = {target_contents}")
+        except Exception as e:
+            print(f"❌ DEBUG: Target path okunamadı: {e}")
+            return folder_analysis
         
         # SORUN ÇÖZÜMÜ: Kaynak klasörün adını al
         source_folder_name = os.path.basename(source_path) if source_path else ""
@@ -447,12 +524,25 @@ class ScanEngine:
             # Derin klasör analizi yap (3 seviye derinlik)
             folder_analysis.update(self._analyze_directory_recursive(target_path, source_path, max_depth=3))
             
+            print(f"🔍 DEBUG: Recursive analiz sonucu = {len(folder_analysis)} klasör")
+            for folder_name in folder_analysis.keys():
+                print(f"🔍 DEBUG: Bulunan klasör: {folder_name}")
+            
             # SORUN ÇÖZÜMÜ: Sonuçları filtrele - kaynak klasörle aynı adlı klasörleri çıkar
             filtered_analysis = {}
             for folder_name, folder_info in folder_analysis.items():
                 # Kaynak klasörle aynı adlı klasörleri atla
                 if source_folder_name and source_folder_name.lower() == folder_name.lower():
                     print(f"⚠️ Kaynak klasörle aynı adlı klasör atlandı: {folder_name}")
+                    continue
+                
+                # "Yazılım Paketleri" klasörünü analiz dışında tut (sadece duplicate tarama için)
+                if ("yazılım paketleri" in folder_name.lower() or 
+                    "yazilim paketleri" in folder_name.lower() or
+                    "software packages" in folder_name.lower() or
+                    "hazır programlar" in folder_name.lower() or 
+                    "hazir programlar" in folder_name.lower()):
+                    print(f"⚠️ Yazılım Paketleri klasörü analiz dışında tutuldu: {folder_name}")
                     continue
                     
                 # Son kopyalama işleminde oluşturulmuş klasörleri tespit et
@@ -464,10 +554,13 @@ class ScanEngine:
                 filtered_analysis[folder_name] = folder_info
             
             print(f"✅ {len(filtered_analysis)} geçerli hedef klasör bulundu")
+            for folder_name, folder_info in filtered_analysis.items():
+                print(f"📂 DEBUG: {folder_name} -> {list(folder_info['extensions'].keys())}")
             
         except Exception as e:
             print(f"❌ Hedef klasör analizi hatası: {e}")
         
+        print(f"🔍 DEBUG: _analyze_target_folders dönüş = {len(filtered_analysis)} klasör")
         return filtered_analysis
     
     def _analyze_directory_recursive(self, directory_path, source_path, max_depth=3, current_depth=0, parent_path=""):
@@ -626,16 +719,66 @@ class ScanEngine:
         return extensions
     
     def _find_suitable_target_folder(self, extension, target_analysis):
-        """Uzantı için uygun hedef klasör bul (öğrenilen kategorilerle)"""
+        """KULLANICI ODAKLI UZANTI EŞLEŞTIRME - Basitleştirilmiş Algoritma"""
         if not extension or not target_analysis:
             return None
         
-        # En uygun klasörü bul
-        best_folder = None
-        best_score = 0
+        print(f"🔍 {lang_manager.get_text('messages.searching_folder').format(ext=extension)}")
         
-        # Dosyanın kategorisini belirle - ÖĞRENİLEN KATEGORİLERİ KULLAN
+        # ÖNCELİK 1: KULLANICININ ÖĞRETTİĞİ KATEGORİ (EN YÜKSEK ÖNCELİK)
+        learned_category = self.file_ops.learned_categories.get(extension)
+        if learned_category:
+            print(f"🧠 KULLANICI TERCİHİ: {extension} -> {learned_category} (öğrenilen kategori)")
+            
+            # Öğrenilen kategoriye uygun klasör var mı?
+            for folder_name, folder_info in target_analysis.items():
+                # Kategori ismini klasör adında ara
+                if self._folder_matches_category(folder_name, learned_category):
+                    print(f"✅ KULLANICI TERCİHİ UYGULANDI: {extension} -> {folder_name}")
+                    return folder_info['path']
+        
+        # ÖNCELİK 2: UZANTI KLASÖRÜ ZATEN MEVCUT (TAM EŞLEŞME)
+        extension_name = extension.replace('.', '').upper()
+        for folder_name, folder_info in target_analysis.items():
+            # Klasör adı uzantı ile tam eşleşiyor mu?
+            if self._is_exact_extension_match(folder_name, extension_name):
+                print(f"🎯 TAM EŞLEŞME: {extension} -> {folder_name} (mevcut uzantı klasörü)")
+                return folder_info['path']
+        
+        # ÖNCELİK 3: AYNI KATEGORİDEKİ KLASÖR (KATEGORİ EŞLEŞME)
         category, category_info = self.file_ops.get_file_category_with_learning(f"test{extension}")
+        if category != 'other_files':
+            for folder_name, folder_info in target_analysis.items():
+                if self._folder_matches_category(folder_name, category):
+                    print(f"🔗 KATEGORİ EŞLEŞME: {extension} -> {folder_name} (kategori: {category})")
+                    return folder_info['path']
+        
+        # ÖNCELİK 4: UZANTI MEVCUT AMA FARKLI İSİMDE
+        for folder_name, folder_info in target_analysis.items():
+            if extension in folder_info.get('extensions', {}):
+                print(f"📁 UZANTI MEVCUT: {extension} -> {folder_name} (uzantı var ama farklı isim)")
+                return folder_info['path']
+        
+        print(f"❌ {lang_manager.get_text('messages.no_folder_found').format(ext=extension)}")
+        return None
+    
+    def _folder_matches_category(self, folder_name, category):
+        """Klasör adının kategori ile eşleşip eşleşmediğini kontrol et"""
+        # Kategori bilgilerini al
+        categories = self.file_ops.get_file_categories()
+        if category not in categories:
+            return False
+        
+        category_info = categories[category]
+        category_folder_name = category_info['folder'].lower()
+        folder_name_lower = folder_name.lower()
+        
+        # Tam eşleşme veya kısmi eşleşme
+        if (category_folder_name in folder_name_lower or 
+            folder_name_lower in category_folder_name):
+            return True
+        
+        # Kategori anahtar kelimelerini kontrol et
         category_keywords = {
             'audio_files': ['müzik', 'ses', 'music', 'audio', 'sound'],
             'video_files': ['video', 'film', 'movie', 'sinema'],
@@ -643,96 +786,29 @@ class ScanEngine:
             'document_files': ['belge', 'doc', 'document', 'text', 'yazı'],
             'archive_files': ['arşiv', 'archive', 'zip', 'sıkıştır'],
             'program_files': ['program', 'uygulama', 'app', 'software'],
-            'cad_3d_files': ['cad', 'çizim', 'tasarım', 'design', '3d', 'model', 'maya', 'blender', 'cinema4d', 'sketchup', 'max', '3ds', 'lightwave', 'rendering', 'animation']
+            'cad_3d_files': ['cad', 'çizim', 'tasarım', 'design', '3d', 'model']
         }
         
-        for folder_name, folder_info in target_analysis.items():
-            extensions = folder_info['extensions']
-            score = 0
-            
-            # 1. Bu uzantı bu klasörde var mı VE klasör adı uzantıyla eşleşiyor mu?
-            if extension in extensions:
-                ext_name = extension.replace('.', '').upper()
-                folder_upper = folder_name.upper()
-                
-                # Klasör adında uzantı geçiyor mu kontrol et
-                if ext_name in folder_upper or folder_upper.endswith(ext_name):
-                    score = extensions[extension] + 100
-                    print(f"🎯 {extension} uzantısı {folder_name} klasöründe bulundu VE klasör adı eşleşiyor (tam eşleşme)")
-                else:
-                    # Uzantı var ama klasör adı eşleşmiyor - düşük puan
-                    score = extensions[extension] * 5
-                    print(f"⚠️ {extension} uzantısı {folder_name} klasöründe var ama klasör adı eşleşmiyor")
-            
-            # 2. Aynı kategorideki başka uzantılar var mı?
-            elif category in category_keywords:
-                # Aynı kategorideki diğer uzantıları kontrol et
-                same_category_extensions = []
-                categories = self.file_ops.get_file_categories()
-                if category in categories:
-                    same_category_extensions = categories[category]['extensions']
-                
-                # Bu klasörde aynı kategoriden uzantı var mı?
-                for ext in same_category_extensions:
-                    if ext in extensions:
-                        score += extensions[ext] * 10  # Kategori eşleşmesi için puan
-                        print(f"🔗 {extension} için {folder_name} klasöründe aynı kategori uzantısı bulundu: {ext}")
-                        break
-            
-            # 3. Klasör adında kategori kelimesi geçiyor mu?
-            if category in category_keywords:
-                for keyword in category_keywords[category]:
-                    if keyword in folder_name.lower():
-                        score += 50
-                        print(f"📝 {folder_name} klasör adında kategori kelimesi bulundu: {keyword}")
-                        break
-            
-            # 4. Klasör adında uzantı geçiyor mu?
-            ext_name = extension.replace('.', '').upper()
-            if ext_name in folder_name.upper():
-                score += 100
-                print(f"📝 {folder_name} klasör adında uzantı bulundu: {ext_name}")
-            
-            # 5. Ana klasör önceliği
-            if folder_info.get('level', 0) == 0:
-                score += 25
-            
-            # 6. Dosya sayısı bonus
-            file_count = folder_info.get('file_count', 0)
-            if file_count > 10:
-                score += 20
-            elif file_count > 5:
-                score += 10
-            
-            if score > best_score:
-                best_score = score
-                best_folder = folder_name
-                best_folder_path = folder_info['path']
+        if category in category_keywords:
+            for keyword in category_keywords[category]:
+                if keyword in folder_name_lower:
+                    return True
         
-        # Sadece gerçek tam eşleşme kabul et (uzantı var VE klasör adı eşleşiyor)
-        # Skor >= 100 VE uzantı + klasör adı eşleşmesi olmalı
-        if best_score >= 100:
-            # Gerçek tam eşleşme mi kontrol et
-            best_folder_extensions = target_analysis[best_folder]['extensions']
-            if extension in best_folder_extensions:
-                ext_name = extension.replace('.', '').upper()
-                folder_name_upper = best_folder.upper()
-                
-                # SORUN ÇÖZÜMÜ: Daha esnek eşleşme kontrolü
-                if (ext_name in folder_name_upper or 
-                    folder_name_upper.endswith(ext_name) or
-                    folder_name_upper.endswith(f"/{ext_name}") or
-                    folder_name_upper.endswith(f"\\{ext_name}")):
-                    
-                    print(f"✅ {extension} için gerçek tam eşleşme bulundu: {best_folder} (skor: {best_score})")
-                    return target_analysis[best_folder]['path']  # TAM YOL DÖNDÜR
-                else:
-                    print(f"⚠️ {extension} klasör adı eşleşmesi başarısız: {ext_name} not properly in {folder_name_upper}")
-            else:
-                print(f"⚠️ {extension} uzantısı {best_folder} klasöründe bulunamadı")
+        return False
+    
+    def _is_exact_extension_match(self, folder_name, extension_name):
+        """Klasör adının uzantı ile tam eşleşip eşleşmediğini kontrol et"""
+        folder_upper = folder_name.upper()
         
-        print(f"❌ {extension} için gerçek tam eşleşme bulunamadı - yeni klasör oluşturulacak")
-        return None
+        # Tam eşleşme kontrolü
+        if (folder_upper == extension_name or
+            folder_upper.endswith(f"/{extension_name}") or
+            folder_upper.endswith(f"\\{extension_name}") or
+            folder_upper.endswith(f" {extension_name}") or
+            extension_name in folder_upper.split("/")):
+            return True
+        
+        return False
     
     def _update_scan_results(self):
         """Tarama sonuçlarını UI'da göster"""
@@ -747,6 +823,15 @@ class ScanEngine:
         
         # İstatistikleri göster
         self._show_scan_statistics()
+        
+        # ORGANIZE BUTONUNU AKTİF ET - Tarama tamamlandığında
+        try:
+            # GUI Manager üzerinden main_modular'e erişim
+            if hasattr(self.gui, 'ui_widgets') and 'organize_btn' in self.gui.ui_widgets:
+                self.gui.ui_widgets['organize_btn'].configure(state='normal')
+                print("✅ Organize butonu aktif edildi")
+        except Exception as e:
+            print(f"⚠️ Organize butonu aktif edilemedi: {e}")
     
     def _update_source_tree(self):
         """Kaynak dosyalar tree'sini güncelle"""
@@ -766,22 +851,51 @@ class ScanEngine:
                                       text=display_name,
                                       values=(size_str, file_type))
     
+    def _get_translated_category_name(self, folder_name):
+        """İngilizce klasör adını mevcut dilde göster"""
+        # Kategori mapping'i - İngilizce klasör adından dil anahtarına
+        category_mapping = {
+            'Image Files': 'categories.image_files',
+            'Document Files': 'categories.document_files',
+            'Audio Files': 'categories.audio_files',
+            'Video Files': 'categories.video_files',
+            'Program Files': 'categories.program_files',
+            'Compressed Files': 'categories.compressed_files',
+            'CAD and 3D Files': 'categories.cad_3d_files',
+            'Code Files': 'categories.code_files',
+            'Font Files': 'categories.font_files',
+            'Other Files': 'categories.other_files',
+            'Software Packages': 'categories.ready_programs'
+        }
+        
+        if folder_name in category_mapping:
+            return lang_manager.get_text(category_mapping[folder_name])
+        else:
+            return folder_name  # Bilinmeyen kategori ise olduğu gibi döndür
+    
     def _update_preview_tree(self):
         """Organizasyon önizleme tree'sini güncelle"""
         self.gui.preview_tree.delete(*self.gui.preview_tree.get_children())
         
         for main_folder, subfolders in self.organization_structure.items():
-            # Ana klasör
+            # Ana klasör - çeviri ile göster
+            display_folder_name = self._get_translated_category_name(main_folder)
             total_files = sum(len(files) for files in subfolders.values())
             main_item = self.gui.preview_tree.insert('', 'end', 
-                                                   text=f"📁 {main_folder}",
+                                                   text=f"📁 {display_folder_name}",
                                                    values=(total_files,))
             
             # Alt klasörler
             for subfolder, files in subfolders.items():
-                self.gui.preview_tree.insert(main_item, 'end',
-                                           text=f"📂 {subfolder}",
-                                           values=(len(files),))
+                if subfolder:  # Boş değilse
+                    self.gui.preview_tree.insert(main_item, 'end',
+                                               text=f"📂 {subfolder}",
+                                               values=(len(files),))
+                else:  # Boş string ise (Software Packages gibi)
+                    for file_info in files:
+                        self.gui.preview_tree.insert(main_item, 'end',
+                                                   text=f"📁 {file_info['name']}",
+                                                   values=(1,))
     
     def _update_duplicate_tree(self):
         """Duplikat dosyalar tree'sini güncelle"""
@@ -790,7 +904,8 @@ class ScanEngine:
         for i, duplicate_group in enumerate(self.source_duplicates):
             if len(duplicate_group) > 1:
                 # Grup başlığı
-                group_name = f"Duplikat Grup {i+1} ({len(duplicate_group)} dosya)"
+                from lang_manager import t
+                group_name = f"{t('messages.duplicate_group')} {i+1} ({len(duplicate_group)} {t('messages.files_lowercase')})"
                 group_item = self.gui.duplicate_tree.insert('', 'end', 
                                                           text=group_name,
                                                           values=('', '', ''))
@@ -811,25 +926,107 @@ class ScanEngine:
         duplicate_files = self.stats['duplicate_files']
         total_size = self._format_size(self.stats['total_size'])
         
-        stats_message = f"""Tarama Tamamlandı!
+        stats_message = f"""{lang_manager.get_text('messages.scan_complete').split('!')[0]}!
         
-📊 İstatistikler:
-• Toplam dosya: {total_files}
-• Unique dosya: {unique_files}
-• Duplikat dosya: {duplicate_files}
-• Toplam boyut: {total_size}
+📊 {lang_manager.get_text('reports.analysis.general_stats')}:
+• {lang_manager.get_text('reports.analysis.total_source_files')}: {total_files}
+• {lang_manager.get_text('messages.unique_files')}: {unique_files}
+• {lang_manager.get_text('reports.analysis.duplicate_files')}: {duplicate_files}
+• {lang_manager.get_text('reports.analysis.total_copy_size')}: {total_size}
 
-📁 Kategoriler:"""
+📁 {lang_manager.get_text('reports.analysis.category_analysis')}:"""
         
         for category, count in self.stats['categories'].items():
             if count > 0:
-                stats_message += f"\n• {category.title()}: {count} dosya"
+                if category == "Software Packages":
+                    category_name = lang_manager.get_text('categories.ready_programs')
+                    stats_message += f"\n• {category_name}: {count} klasör (sadece duplicate tarama)"
+                else:
+                    stats_message += f"\n• {category.title()}: {count} dosya"
         
-        self.gui.status_var.set(f"✅ {total_files} dosya tarandı - {unique_files} unique, {duplicate_files} duplikat")
+        from lang_manager import t
+        self.gui.status_var.set(f"✅ {total_files} {t('messages.files_scanned')} - {unique_files} {t('messages.unique')}, {duplicate_files} {t('messages.duplicate')}")
         
         # İsteğe bağlı detaylı rapor - popup kaldırıldı
         # if total_files > 0:
         #     messagebox.showinfo("Tarama Sonuçları", stats_message)
+
+    def _learn_from_existing_structure(self, target_folder_analysis):
+        """TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından kategorileri öğren"""
+        try:
+            print("🎓 TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından öğrenme başlatılıyor...")
+            print(f"🔍 DEBUG: target_folder_analysis = {list(target_folder_analysis.keys())}")
+            print(f"🔍 DEBUG: Başlangıçta learned_categories = {self.file_ops.learned_categories}")
+            
+            learned_count = 0
+            
+            for folder_name, folder_info in target_folder_analysis.items():
+                folder_path = folder_info['path']
+                extensions = folder_info['extensions']
+                
+                print(f"🔍 DEBUG: İşlenen klasör: {folder_name}")
+                print(f"🔍 DEBUG: Klasör yolu: {folder_path}")
+                print(f"🔍 DEBUG: Bulunan uzantılar: {extensions}")
+                
+                # Bu klasörün kategori ismi nedir?
+                category = self.file_ops._determine_category_from_path(folder_path)
+                print(f"🔍 DEBUG: Tespit edilen kategori: {category}")
+                
+                if category and category != 'other_files':
+                    print(f"📂 Kategori tespit edildi: {folder_name} -> {category}")
+                    
+                    # Bu klasördeki uzantıları öğren
+                    for extension, count in extensions.items():
+                        if extension and count > 0:
+                            print(f"🔍 DEBUG: İşlenen uzantı: {extension} (count: {count})")
+                            # Mevcut öğrenme sistemindeki kategoriyi kontrol et
+                            current_category = self.file_ops._find_extension_in_categories(extension)
+                            
+                            print(f"🔍 DEBUG: {extension} mevcut kategori: {current_category}, yeni kategori: {category}")
+                            if not current_category or current_category != category:
+                                # Bu uzantıyı öğren
+                                print(f"🎯 MEVCUT YAPIDAN ÖĞRENME: {extension} -> {category} ({count} dosya)")
+                                
+                                # Güven skoru - mevcut yapıdaki dosya sayısına göre
+                                confidence = min(95, 60 + (count * 5))  # Minimum %60, maksimum %95
+                                
+                                # ÖNEMLİ: learned_categories dictionary'sine ekleme
+                                print(f"📝 DEBUG: learned_categories'e ekleniyor: {extension} -> {category}")
+                                self.file_ops.learned_categories[extension] = category
+                                print(f"📝 DEBUG: Ekleme sonrası learned_categories = {self.file_ops.learned_categories}")
+                                
+                                if not hasattr(self.file_ops, 'category_confidence'):
+                                    self.file_ops.category_confidence = {}
+                                
+                                self.file_ops.category_confidence[extension] = {
+                                    'category': category,
+                                    'confidence': confidence,
+                                    'source': 'existing_structure_scan',
+                                    'timestamp': time.time(),
+                                    'file_count': count,
+                                    'learned_folder': folder_path
+                                }
+                                
+                                learned_count += 1
+                            else:
+                                print(f"✅ ZATEN BİLİNEN: {extension} -> {category}")
+            
+            print(f"🔍 DEBUG: Öğrenme döngüsü bitti. learned_count = {learned_count}")
+            print(f"🔍 DEBUG: Son hali learned_categories = {self.file_ops.learned_categories}")
+            
+            # Öğrenme sonucu döndür
+            if learned_count > 0:
+                print(f"🎓 TARAMA SIRASI ÖĞRENME TAMAMLANDI: {learned_count} uzantı öğrenildi")
+                return True  # Öğrenme yapıldı
+            else:
+                print("📖 TARAMA SIRASI ÖĞRENME: Yeni öğrenme bulunamadı")
+                return False  # Öğrenme yapılmadı
+                
+        except Exception as e:
+            import traceback
+            print(f"❌ Tarama sırası öğrenme hatası: {e}")
+            print(f"❌ TRACEBACK: {traceback.format_exc()}")
+            return False
     
     def _format_size(self, size_bytes):
         """Dosya boyutunu formatla"""

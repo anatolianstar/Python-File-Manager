@@ -35,14 +35,104 @@
     "open": "Open",
     "rename": "Rename",
     "home": "Home Folder",
-    "go": "Go"
+    "go": "Go",
+    "analyze": "🔍 Target Disk Analysis"
   },
   "labels": {
     "location": "Location",
     "file_folder_name": "File/Folder Name",
     "size": "Size",
     "type": "Type",
-    "modified": "Modified"
+    "modified": "Modified",
+    "scan_mode": "Subfolder scan mode",
+    "folder_structure": "Folder Structure",
+    "file_count": "File Count",
+    "file_path": "File Path"
+  },
+  "panels": {
+    "target_manager": "Target Folder - File Manager",
+    "source_organization": "Source Files and Organization Preview"
+  },
+  "source_tab": {
+    "title": "Source Files",
+    "file_name": "File Name",
+    "size": "Size", 
+    "type": "Type"
+  },
+  "status": {
+    "ready": "Ready",
+    "folders": "folders",
+    "files": "files",
+    "file_count": "File Count",
+    "folder_count": "Folder Count"
+  },
+  "categories": {
+    "image_files": "Image Files",
+    "document_files": "Document Files",
+    "audio_files": "Audio Files", 
+    "video_files": "Video Files",
+    "program_files": "Program Files",
+    "compressed_files": "Compressed Files",
+    "cad_3d_files": "CAD and 3D Files",
+    "code_files": "Code Files",
+    "font_files": "Font Files",
+    "other_files": "Other Files",
+    "ready_programs": "Software Packages"
+  },
+  "scan_options": {
+    "scan_all": "✅ Scan all subfolders (categorize files)",
+    "copy_folders": "📁 Copy folders completely (preserve folder structure)",
+    "files_only": "📄 Scan files only (ignore subfolders)",
+    "reminder": "💡 REMINDER:\n• 'Scan all subfolders': Categorizes all files\n• 'Copy folders completely': Preserves folder structure\n• 'Scan files only': Ignores files in subfolders, processes only main folder files"
+  },
+  "tabs": {
+    "preview": "Organization Preview", 
+    "duplicates": "🔄 Duplicate Files"
+  },
+  "duplicates": {
+    "control_label": "Duplicate Control:",
+    "name": "Name",
+    "size": "Size",
+    "hash": "Hash",
+    "action_label": "For duplicate files:",
+    "ask": "Ask each time",
+    "skip": "Skip automatically",
+    "copy": "Move with number",
+    "groups": "🔄 Duplicate File Groups"
+  },
+  "context_menu": {
+    "open": "🔓 Open",
+    "open_location": "🔍 Open File Location",
+    "copy": "📋 Copy (Ctrl+C)",
+    "cut": "✂️ Cut (Ctrl+X)",
+    "paste": "📁 Paste (Ctrl+V)",
+    "delete": "🗑️ Delete (Del)",
+    "rename": "✏️ Rename (F2)",
+    "file_info": "📊 File Information",
+    "file_hash": "🔄 File Hash",
+    "properties": "📋 Properties",
+    "new_folder": "➕ New Folder",
+    "new_file": "📄 New File",
+    "refresh": "🔄 Refresh (F5)",
+    "folder_properties": "📋 Folder Properties"
+  },
+  "properties": {
+    "title": "File Properties",
+    "name": "Name",
+    "path": "Path",
+    "size": "Size",
+    "created": "Created",
+    "modified": "Modified",
+    "accessed": "Accessed",
+    "type": "Type",
+    "file": "File",
+    "folder": "Folder",
+    "unknown": "Unknown",
+    "folder_properties": "Folder Properties",
+    "folder_name": "Folder Name",
+    "full_path": "Full Path",
+    "total_size": "Total Size",
+    "total_items": "Total Items"
   },
   "messages": {
     "scan_complete": "Scan completed! {count} files found",
@@ -83,7 +173,110 @@
     "file_hash": "File Hash",
     "file_create_error": "Could not create file: {error}",
     "folder_properties": "Folder Properties",
-    "folder_info_error": "Could not get folder information: {error}"
+    "folder_info_error": "Could not get folder information: {error}",
+    "source_selected": "Source folder selected: {folder}",
+    "source_cancelled": "Source folder selection cancelled.",
+    "target_changed": "Target folder changed: {folder}",
+    "target_cancelled": "Target folder selection cancelled.",
+    "folder_copied": "Folder copied: {name}",
+    "file_copied": "File copied: {name}",
+    "organization_starting": "📂 Organization started! Please do not close the program during copying.",
+    "organization_progress": "Processing: {current}/{total} - Do not close!",
+    "creating_folders": "Creating folders...",
+    "copying_files": "Copying files...",
+    "processing_file": "Processing file: {name}, extension: {ext}, is_folder: {is_folder}",
+    "processing_folder": "Folder will be placed in '{category}' category: {name}",
+    "searching_folder": "Searching for suitable folder for {ext} extension...",
+    "no_folder_found": "No suitable folder found for {ext} - new folder will be created",
+    "placing_in_category": "{ext} files will be placed in new category folder: {path}",
+    "copying_to_existing": "Copying files to existing folder: {path}",
+    "full_folder_path": "Full folder path: {path}",
+    "target_folder_not_found": "Target folder not found: {path}",
+    "target_folder_created": "Target folder created: {path}",
+    "target_folder_create_error": "Could not create target folder: {error}",
+    "copied_to_existing": "Copied to existing folder: {file} -> {path}",
+    "existing_copy_error": "Existing folder copy error: {file} - {error}",
+    "existing_file_error": "Existing folder file error: {file} - {error}",
+    "entering_folder": "Entering folder: {path}",
+    "application_closed": "Application closed",
+    "organizer_ready": "Modular file organizer ready! Start by selecting source folder.",
+    "ready_to_copy": "{count} files ready to copy.",
+    "scanning": "Scanning",
+    "files_scanned": "files scanned",
+    "unique": "unique",
+    "duplicate": "duplicate",
+    "unique_files": "Unique files",
+    "copied": "Copied",
+    "skipped": "Skipped", 
+    "errors": "Errors",
+    "duplicate_group": "Duplicate Group",
+    "files_lowercase": "files",
+    "categories_learned": "🎓 New categories learned - Updating organization",
+    "category_changed": "🎓 Category changed: {extension} is now in {category} category",
+    "extension_learned": "🎓 New extension learned: {extension} -> {category}",
+    "folder_learning": "📖 {count} extensions learned from folder contents"
+  },
+  "time": {
+    "completed": "Completed!",
+    "remaining": "Remaining time",
+    "calculating": "Calculating...",
+    "files": "files",
+    "seconds": "seconds",
+    "minutes_short": "m",
+    "seconds_short": "s",
+    "hours_short": "h"
+  },
+      "reports": {
+    "analysis": {
+      "title": "🔍 Target Disk Analysis Report",
+      "general_stats": "📊 GENERAL STATISTICS",
+      "source_folder": "Source folder",
+      "target_folder": "Target folder", 
+      "scan_date": "Scan date",
+      "total_source_files": "Total source files",
+      "files_to_copy": "Files to copy",
+      "existing_files": "Already existing files",
+      "duplicate_files": "Duplicate files",
+      "size_info": "💾 SIZE INFORMATION",
+      "total_copy_size": "Total copy size",
+      "existing_size": "Existing file size",
+      "disk_analysis": "💿 DISK SPACE ANALYSIS",
+      "total_disk_space": "Total disk space",
+      "used_space": "Used space",
+      "free_space": "Free space",
+      "required_space": "Required space",
+      "sufficient_space": "✅ Sufficient space! Remaining",
+      "insufficient_space": "❌ Insufficient space! Missing",
+      "category_analysis": "📁 CATEGORY-BASED ANALYSIS",
+      "to_copy": "To copy",
+      "existing": "Existing",
+      "organization_structure": "📂 DETAILED ORGANIZATION STRUCTURE",
+      "duplicate_analysis": "🔄 DUPLICATE FILE ANALYSIS",
+      "total_duplicate_groups": "Total duplicate groups",
+      "total_duplicate_files": "Total duplicate files",
+      "suggestions": "💡 SUGGESTIONS",
+      "all_files_exist": "✅ All files already exist in target folder.",
+      "insufficient_disk": "⚠️ Insufficient disk space! Free up space or delete unnecessary files first.",
+      "duplicates_found": "🔄 {count} duplicate files detected. Review recommended.",
+      "report_end": "End of report - File Organizer v2.0"
+    },
+    "duplicate": {
+      "title": "🔄 Duplicate File Report",
+      "no_duplicates": "No duplicate files found!",
+      "save_report": "📄 Save Report",
+      "close": "❌ Close",
+      "group": "📁 GROUP",
+      "file_name": "File name",
+      "size": "Size",
+      "extension": "Extension",
+      "locations": "File locations",
+      "report_date": "Report date"
+    },
+    "save": {
+      "title": "Save Report", 
+      "success": "Report saved successfully",
+      "error": "Could not save report"
+    }
   },
   "dialogs": {
     "error": {
@@ -95,6 +288,12 @@
     "info": {
       "title": "Information"
     },
+    "exit": {
+      "title": "Exit",
+      "message": "Are you sure you want to exit the application?"
+    },
+    "select_source": "Select Source Folder",
+    "select_target": "Select Target SSD",
     "folder_conflict": {
       "title": "Folder Conflict",
       "message": "'{folder}' folder already exists!",
@@ -109,6 +308,25 @@
       "skip": "Skip",
       "overwrite_all": "Overwrite All",
       "skip_all": "Skip All"
+    },
+    "duplicate_found": {
+      "title": "Duplicate File Found",
+      "message": "Duplicate file found",
+      "total_count": "Total {count} duplicate files found",
+      "question": "What would you like to do?",
+      "skip_this": "Skip this file",
+      "copy_this": "Copy this file",
+      "skip_all": "Skip all",
+      "copy_all": "Copy all"
+    },
+    "organization_confirm": {
+      "title": "Organization Confirmation",
+      "message": "Organization will start",
+      "statistics": "Statistics",
+      "unique_files_to_copy": "unique files will be copied",
+      "duplicate_files_found": "duplicate files found",
+      "target": "Target",
+      "question": "Are you sure you want to continue?"
     }
   }
 }
