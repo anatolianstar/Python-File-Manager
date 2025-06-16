@@ -54,6 +54,21 @@ class ScanEngine:
             messagebox.showwarning(lang_manager.get_text('warnings.warning'), 
                                  lang_manager.get_text('warnings.select_target_first'))
             return
+        
+        # Hash kontrolü uyarısı
+        if self.gui.duplicate_check_hash.get():
+            result = messagebox.askyesno(
+                "⚠️ Hash Kontrolü Uyarısı",
+                "Hash kontrolü aktif! Bu işlem çok yavaş olabilir, özellikle büyük dosyalar için.\n\n"
+                "• Küçük dosyalar: Hızlı\n"
+                "• Büyük dosyalar (>100MB): Çok yavaş\n"
+                "• Video/resim dosyaları: Çok yavaş\n\n"
+                "Devam etmek istiyor musunuz?\n\n"
+                "💡 İpucu: Sadece dosya adı + boyut kontrolü genellikle yeterlidir.",
+                icon='warning'
+            )
+            if not result:
+                return
             
         # Progress bar'ı göster
         self.gui.progress_var.set(0)
@@ -93,6 +108,10 @@ class ScanEngine:
         except Exception as e:
             # Time estimation durdur (hata durumunda da)
             self.gui.root.after(0, lambda: self.gui.stop_time_estimation())
+            
+            # Butonları sıfırla (hata durumunda da)
+            if hasattr(self, 'main_app') and self.main_app:
+                self.gui.root.after(0, lambda: self.main_app._reset_buttons_after_operation())
             
             error_msg = f"Tarama hatası: {str(e)}"
             self.gui.root.after(0, lambda: self.gui.status_var.set(error_msg))
@@ -298,6 +317,17 @@ class ScanEngine:
         check_name = self.gui.duplicate_check_name.get()
         check_size = self.gui.duplicate_check_size.get()
         check_hash = self.gui.duplicate_check_hash.get()
+        check_media = self.gui.duplicate_check_media.get()
+        check_similar = self.gui.duplicate_check_similar.get()
+        
+        print(f"🔍 Duplikat kontrol seçenekleri: Name={check_name}, Size={check_size}, Hash={check_hash}, Media={check_media}, Similar={check_similar}")
+        
+        if check_media:
+            print("📸 MEDIA BOYUT+DIMENSIONS MATCH aktif: Dosya Boyutu + Media Boyutları (isim farklı olabilir)")
+        if check_similar:
+            print("🤔 MUHTEMEL DUPLIKAT aktif: İsim benzerliği + boyut kontrolü (çok sıkı kriterler)")
+        if not any([check_name, check_size, check_hash, check_media, check_similar]):
+            print("⚠️ Hiçbir duplikat kontrolü seçilmedi - tüm dosyalar unique olacak")
         
         # Dosyaları grupla
         file_groups = defaultdict(list)
@@ -312,21 +342,72 @@ class ScanEngine:
             key_parts = []
             
             if check_name:
-                key_parts.append(file_info['name'].lower())
+                key_parts.append(f"name:{file_info['name'].lower()}")
             
             if check_size:
-                key_parts.append(str(file_info['size']))
+                key_parts.append(f"size:{file_info['size']}")
             
             if check_hash:
                 if not file_info['hash']:
                     file_info['hash'] = self._calculate_file_hash(file_info['path'])
                 if file_info['hash']:
-                    key_parts.append(file_info['hash'])
+                    key_parts.append(f"hash:{file_info['hash']}")
+            
+            if check_media:
+                # Media duplikat kontrolü: SADECE media dosyaları için boyut + dimensions match
+                if self._is_media_file(file_info['path']):
+                    # Media boyutları (dimensions) - ZORUNLU
+                    if not file_info.get('dimensions'):
+                        file_info['dimensions'] = self._get_media_dimensions(file_info['path'])
+                    
+                    # MEDIA MATCH için kriterler (İSİM KONTROLÜ YOK):
+                    # 1. Dosya boyutu (tam eşleşme)
+                    key_parts.append(f"media_size:{file_info['size']}")
+                    
+                    # 2. Media boyutları (tam eşleşme)
+                    if file_info.get('dimensions'):
+                        key_parts.append(f"media_dim:{file_info['dimensions']}")
+                        print(f"📸 Media kontrolü: {file_info['name']} -> {file_info.get('dimensions', 'boyut_yok')} ({file_info['size']} bytes)")
+                    else:
+                        # Boyutları alınamazsa unique key ver (duplikat olmayacak)
+                        key_parts.append(f"media_no_dim:{file_info['path']}")
+                        print(f"📸 Media kontrolü (boyut alınamadı): {file_info['name']} -> unique")
+                    
+                    # NOT: İsim kontrolü YOK - farklı isimlerde ama aynı boyut+dimensions olan dosyalar duplikat bulunacak
+                    
+                else:
+                    # Media olmayan dosyalar için media kontrolü geçersiz
+                    # Unique key ver ki duplikat olmasın
+                    key_parts.append(f"non_media:{file_info['path']}")
+            
+            if check_similar:
+                # Muhtemel duplikat kontrolü: normalize edilmiş isim + boyut/boyutlar
+                # NOT: Bu sadece likely duplicate için kullanılacak, exact duplicate için değil
+                normalized_name = self._normalize_filename(file_info['name'])
+                if normalized_name.strip():  # Boş değilse
+                    key_parts.append(f"norm_name:{normalized_name}")
+                    
+                    # Dosya boyutu ekle (eğer yoksa)
+                    if not check_size:
+                        key_parts.append(f"similar_size:{file_info['size']}")
+                    
+                    # Media dosyası ise boyutları da ekle
+                    if self._is_media_file(file_info['path']):
+                        if not file_info.get('dimensions'):
+                            file_info['dimensions'] = self._get_media_dimensions(file_info['path'])
+                        if file_info.get('dimensions'):
+                            key_parts.append(f"similar_dim:{file_info['dimensions']}")
+                    
+                    print(f"🤔 Muhtemel duplikat kontrolü: {file_info['name']} -> '{normalized_name}'")
             
             # Anahtar oluştur
             if key_parts:
                 key = '|'.join(key_parts)
                 file_groups[key].append(file_info)
+            else:
+                # Hiçbir kontrol seçilmemişse her dosya unique
+                unique_key = f"unique:{file_info['path']}"
+                file_groups[unique_key].append(file_info)
             
             # Progress güncelle
             progress = 50 + (i + 1) / total_files * 30  # %50-80 arası
@@ -339,15 +420,45 @@ class ScanEngine:
             if i % 50 == 0:
                 time.sleep(0.001)
         
-        # Duplikatları ayır
+        # Duplikatları ayır - DÜZELTME: Sadece fazladan olanlar duplikat
+        exact_duplicates_found = 0
+        print(f"🔍 Dosya grupları analiz ediliyor: {len(file_groups)} grup bulundu")
+        
         for key, files in file_groups.items():
             if len(files) > 1:
-                # Duplikat grup
-                self.duplicate_files.extend(files)
-                self.source_duplicates.append(files)
+                # Duplikat grup - İlk dosya orijinal, geri kalanlar duplikat
+                original_file = files[0]  # İlk dosyayı orijinal olarak kabul et
+                duplicate_files_in_group = files[1:]  # Geri kalanlar duplikat
+                
+                # Orijinal dosyayı unique'e ekle
+                self.unique_files.append(original_file)
+                
+                # Duplikatları duplikat listesine ekle
+                self.duplicate_files.extend(duplicate_files_in_group)
+                self.source_duplicates.append(files)  # Tüm grup (debug için)
+                
+                exact_duplicates_found += len(duplicate_files_in_group)
+                print(f"🔍 EXACT duplikat grup bulundu:")
+                print(f"   📋 Anahtar: {key}")
+                print(f"   📄 Orijinal: {original_file['name']}")
+                for i, dup_file in enumerate(duplicate_files_in_group):
+                    print(f"   📄 Duplikat {i+1}: {dup_file['name']}")
+                print(f"   📊 Toplam: 1 orijinal + {len(duplicate_files_in_group)} duplikat")
             else:
                 # Unique dosya
                 self.unique_files.extend(files)
+                # Sadece media dosyaları için anahtar göster
+                if any(self._is_media_file(f['path']) for f in files):
+                    print(f"📄 Unique media dosyası: {files[0]['name']} (anahtar: {key})")
+        
+        print(f"✅ EXACT duplikat kontrolü tamamlandı: {exact_duplicates_found} exact duplikat bulundu")
+        
+        # Muhtemel duplikatları tespit et (eğer similar kontrolü aktifse)
+        if check_similar:
+            print("🤔 Muhtemel duplikat kontrolü başlatılıyor...")
+            self._detect_likely_duplicates()
+        else:
+            print("ℹ️ Muhtemel duplikat kontrolü kapalı (isteğe bağlı)")
         
         # İstatistikleri güncelle
         self.stats['unique_files'] = len(self.unique_files)
@@ -364,6 +475,349 @@ class ScanEngine:
         except:
             return None
     
+    def _is_media_file(self, file_path):
+        """Dosyanın media dosyası olup olmadığını kontrol et"""
+        extension = os.path.splitext(file_path)[1].lower()
+        media_extensions = [
+            # Resim formatları
+            '.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp', '.svg', '.ico',
+            # Video formatları
+            '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.mpg', '.mpeg'
+        ]
+        return extension in media_extensions
+    
+    def _get_media_dimensions(self, file_path):
+        """Media dosyasının boyutlarını al"""
+        try:
+            extension = os.path.splitext(file_path)[1].lower()
+            
+            # Resim dosyaları için
+            if extension in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']:
+                dimensions = self._get_image_dimensions(file_path)
+                if dimensions:
+                    print(f"📐 Resim boyutu alındı: {os.path.basename(file_path)} -> {dimensions}")
+                else:
+                    print(f"❌ Resim boyutu alınamadı: {os.path.basename(file_path)}")
+                return dimensions
+            
+            # Video dosyaları için
+            elif extension in ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']:
+                dimensions = self._get_video_dimensions(file_path)
+                if dimensions:
+                    print(f"📐 Video boyutu alındı: {os.path.basename(file_path)} -> {dimensions}")
+                else:
+                    print(f"❌ Video boyutu alınamadı: {os.path.basename(file_path)}")
+                return dimensions
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Media boyut alma hatası: {os.path.basename(file_path)} - {e}")
+            return None
+    
+    def _get_image_dimensions(self, file_path):
+        """Resim dosyasının boyutlarını al"""
+        try:
+            with open(file_path, 'rb') as f:
+                # JPEG için
+                if file_path.lower().endswith(('.jpg', '.jpeg')):
+                    return self._parse_jpeg_dimensions(f)
+                # PNG için
+                elif file_path.lower().endswith('.png'):
+                    return self._parse_png_dimensions(f)
+                else:
+                    return None
+        except:
+            return None
+    
+    def _parse_jpeg_dimensions(self, f):
+        """JPEG dosyasından boyutları oku"""
+        try:
+            f.seek(0)
+            if f.read(2) != b'\xff\xd8':  # JPEG magic number
+                return None
+            
+            while True:
+                marker = f.read(2)
+                if len(marker) != 2:
+                    break
+                    
+                if marker[0] != 0xff:
+                    break
+                    
+                # SOF (Start of Frame) marker'ları
+                if marker[1] in [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]:
+                    f.read(3)  # Length + precision
+                    height = int.from_bytes(f.read(2), 'big')
+                    width = int.from_bytes(f.read(2), 'big')
+                    return f"{width}x{height}"
+                else:
+                    # Segment length oku ve atla
+                    length = int.from_bytes(f.read(2), 'big')
+                    f.seek(length - 2, 1)
+            
+            return None
+        except:
+            return None
+    
+    def _parse_png_dimensions(self, f):
+        """PNG dosyasından boyutları oku"""
+        try:
+            f.seek(0)
+            if f.read(8) != b'\x89PNG\r\n\x1a\n':  # PNG signature
+                return None
+            
+            # IHDR chunk'ı oku
+            f.read(4)  # Chunk length
+            if f.read(4) != b'IHDR':
+                return None
+                
+            width = int.from_bytes(f.read(4), 'big')
+            height = int.from_bytes(f.read(4), 'big')
+            return f"{width}x{height}"
+        except:
+            return None
+    
+    def _get_video_dimensions(self, file_path):
+        """Video dosyasının boyutlarını al (basit yaklaşım)"""
+        try:
+            # Video metadata okuma karmaşık, basit tahmin kullanıyoruz
+            file_size = os.path.getsize(file_path)
+            
+            # Dosya boyutuna göre tahmin
+            if file_size < 50 * 1024 * 1024:  # 50MB altı
+                return "720x480"  # SD
+            elif file_size < 200 * 1024 * 1024:  # 200MB altı
+                return "1280x720"  # HD
+            elif file_size < 500 * 1024 * 1024:  # 500MB altı
+                return "1920x1080"  # Full HD
+            else:
+                return "3840x2160"  # 4K
+                
+        except:
+            return None
+    
+    def _calculate_name_similarity(self, name1, name2):
+        """İki dosya isminin benzerlik oranını hesapla (0-100) - GELİŞTİRİLMİŞ ALGORİTMA"""
+        try:
+            # Uzantıları kaldır
+            name1_base = os.path.splitext(name1)[0].lower()
+            name2_base = os.path.splitext(name2)[0].lower()
+            
+            # Boş isim kontrolü
+            if not name1_base or not name2_base:
+                return 0
+            
+            # Tamamen aynıysa %100
+            if name1_base == name2_base:
+                return 100
+            
+            # Basit Levenshtein distance hesapla
+            def levenshtein_distance(s1, s2):
+                if len(s1) < len(s2):
+                    return levenshtein_distance(s2, s1)
+                
+                if len(s2) == 0:
+                    return len(s1)
+                
+                previous_row = list(range(len(s2) + 1))
+                for i, c1 in enumerate(s1):
+                    current_row = [i + 1]
+                    for j, c2 in enumerate(s2):
+                        insertions = previous_row[j + 1] + 1
+                        deletions = current_row[j] + 1
+                        substitutions = previous_row[j] + (c1 != c2)
+                        current_row.append(min(insertions, deletions, substitutions))
+                    previous_row = current_row
+                
+                return previous_row[-1]
+            
+            # Levenshtein distance'ı benzerlik oranına çevir
+            max_len = max(len(name1_base), len(name2_base))
+            distance = levenshtein_distance(name1_base, name2_base)
+            similarity = ((max_len - distance) / max_len) * 100
+            
+            # Ek bonuslar
+            # Bonus 1: Bir isim diğerinin içinde geçiyorsa
+            if name1_base in name2_base or name2_base in name1_base:
+                similarity = min(100, similarity + 10)
+            
+            # Bonus 2: Aynı kelimeler içeriyorsa (boşluk/tire ile ayrılmış)
+            import re
+            words1 = set(re.split(r'[\s\-_]+', name1_base))
+            words2 = set(re.split(r'[\s\-_]+', name2_base))
+            
+            if words1 and words2:
+                common_words = words1.intersection(words2)
+                if common_words:
+                    word_bonus = (len(common_words) / max(len(words1), len(words2))) * 15
+                    similarity = min(100, similarity + word_bonus)
+            
+            # Malus: Çok farklı uzunluklarda isimler
+            length_ratio = min(len(name1_base), len(name2_base)) / max(len(name1_base), len(name2_base))
+            if length_ratio < 0.5:  # Biri diğerinin yarısından kısaysa
+                similarity *= 0.8  # %20 azalt
+            
+            return int(max(0, min(100, similarity)))
+            
+        except Exception as e:
+            print(f"⚠️ İsim benzerliği hesaplama hatası: {e}")
+            return 0
+    
+    def _normalize_filename(self, filename):
+        """Dosya ismini normalize et (sayılar, tarihler vs. kaldır)"""
+        try:
+            import re
+            
+            # Uzantıyı kaldır
+            name_base = os.path.splitext(filename)[0].lower()
+            
+            # Yaygın kalıpları kaldır
+            # Tarih kalıpları: 20231105, 2023-11-05, 05.11.2023
+            name_base = re.sub(r'\d{8}', '', name_base)  # 20231105
+            name_base = re.sub(r'\d{4}-\d{2}-\d{2}', '', name_base)  # 2023-11-05
+            name_base = re.sub(r'\d{2}\.\d{2}\.\d{4}', '', name_base)  # 05.11.2023
+            
+            # Saat kalıpları: 14:30, 1430
+            name_base = re.sub(r'\d{2}:\d{2}', '', name_base)  # 14:30
+            name_base = re.sub(r'\d{4}(?=\D|$)', '', name_base)  # 1430
+            
+            # Sayı dizileri (3+ rakam)
+            name_base = re.sub(r'\d{3,}', '', name_base)
+            
+            # Özel karakterleri kaldır
+            name_base = re.sub(r'[_\-\(\)\[\]{}]', ' ', name_base)
+            
+            # Çoklu boşlukları tek boşluğa çevir
+            name_base = re.sub(r'\s+', ' ', name_base).strip()
+            
+            return name_base
+            
+        except:
+                         return filename
+    
+    def _detect_likely_duplicates(self):
+        """Muhtemel duplikatları tespit et (isim benzerliği + boyut/boyutlar) - ÇOK SIKI KRİTERLER"""
+        try:
+            self.likely_duplicates = []
+            
+            # Sadece media dosyalarını kontrol et
+            media_files = [f for f in self.unique_files if self._is_media_file(f['path'])]
+            
+            print(f"🤔 {len(media_files)} media dosyası için muhtemel duplikat kontrolü başlıyor...")
+            
+            # PERFORMANS OPTİMİZASYONU: Çok fazla dosya varsa sınırla
+            if len(media_files) > 500:  # 1000'den 500'e düşürdük
+                print(f"⚠️ Çok fazla media dosyası ({len(media_files)}), ilk 500 tanesi kontrol edilecek")
+                media_files = media_files[:500]
+            
+            # PERFORMANS OPTİMİZASYONU: Maksimum çift sayısını sınırla
+            max_pairs = 100  # 1000'den 100'e düşürdük (çok daha sıkı)
+            pair_count = 0
+            
+            # Her dosyayı diğerleriyle karşılaştır
+            for i, file1 in enumerate(media_files):
+                if self.stop_scanning or pair_count >= max_pairs:
+                    if pair_count >= max_pairs:
+                        print(f"⚠️ Maksimum çift sayısına ulaşıldı ({max_pairs}), kontrol durduruluyor")
+                    return
+                
+                # Progress göster
+                if i % 50 == 0:  # 100'den 50'ye düşürdük
+                    print(f"🔍 İşlenen dosya: {i}/{len(media_files)}")
+                
+                for j, file2 in enumerate(media_files[i+1:], i+1):
+                    if pair_count >= max_pairs:
+                        break
+                    
+                    # HIZLI FİLTRE 1: Çok farklı boyutları hemen elendir (ÇOK SIKI)
+                    size_ratio = min(file1['size'], file2['size']) / max(file1['size'], file2['size'])
+                    if size_ratio < 0.95:  # %5'ten fazla boyut farkı varsa atla (çok daha sıkı)
+                        continue
+                    
+                    # HIZLI FİLTRE 2: Boyutlar farklıysa atla (ÇOK SIKI)
+                    if file1.get('dimensions') and file2.get('dimensions'):
+                        if file1['dimensions'] != file2['dimensions']:
+                            continue  # Boyutlar farklıysa kesinlikle duplikat değil
+                    elif file1.get('dimensions') or file2.get('dimensions'):
+                        # Birinde boyut var diğerinde yok - muhtemelen farklı dosyalar
+                        continue
+                    
+                    # İsim benzerliği hesapla
+                    similarity = self._calculate_name_similarity(file1['name'], file2['name'])
+                    
+                    # HIZLI FİLTRE 3: Çok düşük benzerlik varsa atla (ÇOK SIKI)
+                    if similarity < 90:  # %80'den %90'a çıkardık (çok daha sıkı)
+                        continue
+                    
+                    # Boyut benzerliği kontrol et
+                    size_diff = abs(file1['size'] - file2['size']) / max(file1['size'], file2['size']) * 100
+                    
+                    # Boyutlar benzer mi kontrol et (eğer varsa)
+                    dimension_match = False
+                    if file1.get('dimensions') and file2.get('dimensions'):
+                        dimension_match = file1['dimensions'] == file2['dimensions']
+                    
+                    # Muhtemel duplikat kriterleri - ÇOK ÇOK SIKI (FALSE POSITIVE ÖNLEME)
+                    is_likely_duplicate = False
+                    confidence = 0
+                    
+                    # Kriter 1: İsim %98+ benzer + boyut %99+ benzer + aynı boyutlar (neredeyse kesin)
+                    if similarity >= 98 and size_diff <= 1 and dimension_match:
+                        is_likely_duplicate = True
+                        confidence = min(98, similarity + (100 - size_diff))
+                    
+                    # Kriter 2: İsim %95+ benzer + aynı boyutlar + boyut %98+ benzer (çok yüksek güven)
+                    elif similarity >= 95 and dimension_match and size_diff <= 2:
+                        is_likely_duplicate = True
+                        confidence = min(95, similarity + (100 - size_diff))
+                    
+                    # Kriter 3: İsim %99+ benzer (neredeyse aynı isim) + boyut %95+ benzer
+                    elif similarity >= 99 and size_diff <= 5:
+                        is_likely_duplicate = True
+                        confidence = min(92, similarity)
+                    
+                    # ÇOK SIKI: Normalize edilmiş isimler de kontrol et
+                    if is_likely_duplicate:
+                        norm1 = self._normalize_filename(file1['name'])
+                        norm2 = self._normalize_filename(file2['name'])
+                        
+                        # Normalize edilmiş isimler çok farklıysa false positive olabilir
+                        if norm1.strip() and norm2.strip():
+                            norm_similarity = self._calculate_name_similarity(norm1, norm2)
+                            if norm_similarity < 80:  # Normalize edilmiş isimler %80'den düşükse atla
+                                print(f"🚫 False positive önlendi: {file1['name']} vs {file2['name']} (norm: {norm_similarity}%)")
+                                continue
+                    
+                    if is_likely_duplicate:
+                        # Muhtemel duplikat çifti kaydet
+                        likely_pair = {
+                            'file1': file1,
+                            'file2': file2,
+                            'name_similarity': similarity,
+                            'size_difference': size_diff,
+                            'dimension_match': dimension_match,
+                            'confidence': confidence
+                        }
+                        
+                        self.likely_duplicates.append(likely_pair)
+                        pair_count += 1
+                        
+                        # Her çifti logla (az olacağı için)
+                        print(f"🤔 Muhtemel duplikat bulundu ({confidence}% güven): {file1['name']} vs {file2['name']}")
+            
+            print(f"✅ Muhtemel duplikat kontrolü tamamlandı: {len(self.likely_duplicates)} çift bulundu (max {max_pairs})")
+            
+        except Exception as e:
+            print(f"⚠️ Muhtemel duplikat tespit hatası: {e}")
+            import traceback
+            traceback.print_exc()
+            self.likely_duplicates = []
+            
+            # UI'yi güncelle
+            self.gui.root.after(0, lambda: self.gui.progress_var.set(80))
+            print("🔄 Muhtemel duplikat hatası nedeniyle normal taramaya devam ediliyor...")
+     
     def _create_organization_structure(self):
         """Organizasyon yapısını oluştur - GELİŞTİRİLMİŞ SÜRÜM"""
 
@@ -481,14 +935,110 @@ class ScanEngine:
                 category, category_info = self.file_ops.get_file_category_with_learning(file_info['path'])
                 main_folder = category_info['folder']
                 
-                # Alt klasör
-                if extension in category_info['subfolders']:
-                    subfolder = category_info['subfolders'][extension]
+                # Alt klasör - Other Files için özel işlem
+                if main_folder == "Other Files":
+                    # Bilinmeyen uzantılar için dinamik alt klasör oluştur
+                    if extension:
+                        subfolder = extension.replace('.', '').upper()  # .iss -> ISS
+                    else:
+                        subfolder = 'No_Extension'  # Uzantısız dosyalar için
+                    print(f"📁 Bilinmeyen uzantı Other Files'a yerleştiriliyor: {extension} -> Other Files/{subfolder}")
                 else:
-                    subfolder = extension.replace('.', '').upper() if extension else 'Uzantisiz'
+                    # Diğer kategoriler için normal işlem
+                    if extension in category_info['subfolders']:
+                        subfolder = category_info['subfolders'][extension]
+                    else:
+                        subfolder = extension.replace('.', '').upper() if extension else 'Uzantisiz'
                 
                 print(f"📁 {lang_manager.get_text('messages.placing_in_category').format(ext=extension, path=f'{main_folder}/{subfolder}')}")
                 self.organization_structure[main_folder][subfolder].append(file_info)
+        
+        # Duplikat dosyaları da "Duplicate Files" kategorisine ekle
+        if self.duplicate_files:
+            print(f"🔍 DUPLIKAT DOSYALAR BULUNDU: {len(self.duplicate_files)} adet")
+            duplicate_folder = "Duplicate Files"
+            if duplicate_folder not in self.organization_structure:
+                self.organization_structure[duplicate_folder] = defaultdict(list)
+            
+            # Duplikat dosyaları kaynak klasör yapısına göre organize et
+            for file_info in self.duplicate_files:
+                try:
+                    # Kaynak dosyanın relative path'ini bul
+                    source_base = self.file_ops.source_path
+                    relative_path = os.path.relpath(file_info['path'], source_base)
+                    
+                    # Klasör yapısını koruyarak ekle
+                    subfolder_path = os.path.dirname(relative_path)
+                    if not subfolder_path or subfolder_path == '.':
+                        subfolder_path = 'Root'  # Ana klasördeki dosyalar için
+                    
+                    # Duplikat dosyayı işaretle
+                    file_info['is_duplicate'] = True
+                    file_info['original_path'] = relative_path
+                    
+                    self.organization_structure[duplicate_folder][subfolder_path].append(file_info)
+                    print(f"📋 Duplikat preview'a eklendi: {relative_path} -> Duplicate Files/{subfolder_path}")
+                    
+                except Exception as e:
+                    print(f"⚠️ Duplikat preview ekleme hatası: {e}")
+                    # Fallback: direkt ana klasöre ekle
+                    self.organization_structure[duplicate_folder]['Duplicates'].append(file_info)
+        else:
+            print(f"ℹ️ HİÇ DUPLIKAT DOSYA BULUNAMADI - Duplicate Files klasörü oluşturulmayacak")
+            print(f"📊 Kontrol edilen dosya sayısı: {len(self.all_scanned_files)}")
+            print(f"📊 Unique dosya sayısı: {len(self.unique_files)}")
+            print(f"📊 Duplikat dosya sayısı: {len(self.duplicate_files)}")
+            
+            # Hangi kontrollerin aktif olduğunu tekrar göster
+            check_media = self.gui.duplicate_check_media.get()
+            check_similar = self.gui.duplicate_check_similar.get()
+            check_name = self.gui.duplicate_check_name.get()
+            check_size = self.gui.duplicate_check_size.get()
+            check_hash = self.gui.duplicate_check_hash.get()
+            
+            print(f"🔍 Aktif duplikat kontrolleri: Media={check_media}, Similar={check_similar}, Name={check_name}, Size={check_size}, Hash={check_hash}")
+            
+            if not any([check_media, check_similar, check_name, check_size, check_hash]):
+                print("⚠️ HİÇBİR DUPLIKAT KONTROLÜ AKTİF DEĞİL - Bu yüzden duplikat bulunamadı!")
+            elif check_media:
+                media_file_count = sum(1 for f in self.all_scanned_files if self._is_media_file(f['path']))
+                print(f"📸 Media dosya sayısı: {media_file_count}")
+                if media_file_count == 0:
+                    print("⚠️ HİÇ MEDIA DOSYASI YOK - Media kontrolü çalışmayacak!")
+                else:
+                    print("🔍 Media dosyaları var ama duplikat bulunamadı - boyut+dimensions eşleşmesi yok")
+        
+        # Muhtemel duplikatları da "Likely Duplicates" kategorisine ekle
+        if hasattr(self, 'likely_duplicates') and self.likely_duplicates:
+            likely_folder = "Likely Duplicates"
+            if likely_folder not in self.organization_structure:
+                self.organization_structure[likely_folder] = defaultdict(list)
+            
+            # Muhtemel duplikat çiftlerini organize et
+            for i, pair in enumerate(self.likely_duplicates):
+                try:
+                    # Her çift için ayrı bir alt klasör oluştur
+                    pair_folder = f"Pair_{i+1}_Confidence_{pair['confidence']}%"
+                    
+                    # İki dosyayı da aynı klasöre ekle
+                    for file_key in ['file1', 'file2']:
+                        file_info = pair[file_key].copy()  # Kopyala ki orijinali değişmesin
+                        
+                        # Muhtemel duplikat işareti ekle
+                        file_info['is_likely_duplicate'] = True
+                        file_info['pair_info'] = {
+                            'confidence': pair['confidence'],
+                            'name_similarity': pair['name_similarity'],
+                            'size_difference': pair['size_difference'],
+                            'dimension_match': pair['dimension_match']
+                        }
+                        
+                        self.organization_structure[likely_folder][pair_folder].append(file_info)
+                    
+                    print(f"🤔 Muhtemel duplikat çifti preview'a eklendi: {pair['file1']['name']} & {pair['file2']['name']} -> Likely Duplicates/{pair_folder}")
+                    
+                except Exception as e:
+                    print(f"⚠️ Muhtemel duplikat ekleme hatası: {e}")
         
         # Progress tamamla
         self.gui.root.after(0, lambda: self.gui.progress_var.set(100))
@@ -830,6 +1380,12 @@ class ScanEngine:
             if hasattr(self.gui, 'ui_widgets') and 'organize_btn' in self.gui.ui_widgets:
                 self.gui.ui_widgets['organize_btn'].configure(state='normal')
                 print("✅ Organize butonu aktif edildi")
+            
+            # Main app referansı varsa butonları sıfırla
+            if hasattr(self, 'main_app') and self.main_app:
+                self.main_app._reset_buttons_after_operation()
+                print("✅ Tarama tamamlandı - butonlar sıfırlandı")
+                
         except Exception as e:
             print(f"⚠️ Organize butonu aktif edilemedi: {e}")
     
@@ -1017,6 +1573,12 @@ class ScanEngine:
             # Öğrenme sonucu döndür
             if learned_count > 0:
                 print(f"🎓 TARAMA SIRASI ÖĞRENME TAMAMLANDI: {learned_count} uzantı öğrenildi")
+                
+                # ÖNEMLİ: Öğrenilenleri hemen kaydet
+                print("💾 Öğrenilen kategoriler kaydediliyor...")
+                self.file_ops.save_learned_categories()
+                print("✅ Öğrenilen kategoriler başarıyla kaydedildi!")
+                
                 return True  # Öğrenme yapıldı
             else:
                 print("📖 TARAMA SIRASI ÖĞRENME: Yeni öğrenme bulunamadı")

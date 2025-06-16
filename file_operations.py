@@ -263,10 +263,9 @@ class FileOperations:
             if learned_category in categories:
                 return learned_category, categories[learned_category]
         
-        # Hala bulunamadıysa en yaygın kategori olan document_files'a koy
-        # "Other Files" kategorisi oluşturmak yerine
-        print(f"⚠️ Unknown extension {extension}, defaulting to document_files")
-        return 'document_files', categories['document_files']
+        # Hala bulunamadıysa "Other Files" kategorisine gönder
+        print(f"⚠️ Unknown extension {extension}, sending to other_files")
+        return 'other_files', categories['other_files']
     
     def select_source_folder(self):
         """Kaynak klasör seçimi"""
@@ -1039,6 +1038,60 @@ class FileOperations:
             
         except Exception as e:
             return False, f"Kopyalama hatası: {str(e)}"
+    
+    def move_file_optimized(self, source_path, target_path, progress_callback=None):
+        """Optimize edilmiş dosya taşıma - Aynı disk için hızlı rename, farklı disk için kopyala+sil"""
+        try:
+            # Kaynak ve hedef dosyaların disk sürücülerini kontrol et
+            source_drive = os.path.splitdrive(os.path.abspath(source_path))[0].upper()
+            target_drive = os.path.splitdrive(os.path.abspath(target_path))[0].upper()
+            
+            # Aynı disk ise hızlı rename kullan
+            if source_drive == target_drive:
+                try:
+                    # Hedef dizin yoksa oluştur
+                    target_dir = os.path.dirname(target_path)
+                    if not os.path.exists(target_dir):
+                        os.makedirs(target_dir, exist_ok=True)
+                    
+                    # Hızlı taşıma - sadece dosya tablosu güncellenir
+                    os.rename(source_path, target_path)
+                    
+                    # Progress callback - anında %100
+                    if progress_callback:
+                        progress_callback(100, 1, 1)
+                    
+                    return True, "Dosya hızlı taşıma ile başarıyla taşındı"
+                except Exception as e:
+                    # Rename başarısız olursa fallback: kopyala+sil
+                    print(f"⚠️ Hızlı taşıma başarısız, kopyala+sil moduna geçiliyor: {e}")
+                    return self._move_file_copy_delete(source_path, target_path, progress_callback)
+            else:
+                # Farklı diskler - kopyala+sil gerekli
+                return self._move_file_copy_delete(source_path, target_path, progress_callback)
+                
+        except Exception as e:
+            return False, str(e)
+    
+    def _move_file_copy_delete(self, source_path, target_path, progress_callback=None):
+        """Farklı diskler için kopyala+sil taşıma"""
+        try:
+            # Önce dosyayı kopyala
+            success, message = self.copy_file_optimized(source_path, target_path, progress_callback)
+            
+            if success:
+                # Kopyalama başarılıysa kaynak dosyayı sil
+                try:
+                    os.remove(source_path)
+                    return True, "Dosya başarıyla taşındı (kopyala+sil)"
+                except Exception as e:
+                    # Silme başarısız olursa uyarı ver ama başarılı say
+                    return True, f"Dosya kopyalandı ama orijinal silinemedi: {e}"
+            else:
+                return False, f"Taşıma başarısız: {message}"
+                
+        except Exception as e:
+            return False, str(e)
 
     def copy_file_advanced(self, source_path, target_path, file_size, source_hash, progress_callback=None):
         """Gelişmiş büyük dosya kopyalama - Hash verification, Resume, Progress"""

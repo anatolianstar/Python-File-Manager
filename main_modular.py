@@ -9,6 +9,8 @@ import sys
 import os
 import shutil
 import traceback
+import time
+import hashlib
 
 # Multi-language support
 from lang_manager import t, set_language, get_languages, lang_manager
@@ -20,6 +22,8 @@ try:
     from file_operations import FileOperations
     from scan_engine import ScanEngine
     from reporting import ReportingManager
+    from duplicate_image_finder import DuplicateImageFinder
+    from duplicate_file_finder import DuplicateFileFinder
 except ImportError as e:
     print(f"Modül import hatası: {e}")
     print("Tüm modül dosyalarının aynı klasörde olduğundan emin olun!")
@@ -32,6 +36,11 @@ class ModularFileManager:
         try:
             # Ana pencere oluştur
             self.root = tk.Tk()
+            
+            # İşlem durdurma kontrolü için değişkenler
+            self.operation_cancelled = False
+            self.current_operation_thread = None
+            self.operation_type = None  # "scan" veya "organize"
             
             # Hata yakalama sistemi kur
             self.setup_error_handling()
@@ -90,8 +99,17 @@ class ModularFileManager:
             # 3. Scan Engine - Tarama motoru
             self.scan_engine = ScanEngine(self.gui_manager, self.file_operations)
             
+            # Scan engine'e main referansı ver (buton kontrolü için)
+            self.scan_engine.main_app = self
+            
             # 4. Reporting Manager - Raporlama
             self.reporting = ReportingManager(self.gui_manager, self.file_operations, self.scan_engine)
+            
+            # 5. Duplicate Image Finder - Tek klasör duplikat bulucu
+            self.duplicate_finder = DuplicateImageFinder(self.root)
+            
+            # 6. Duplicate File Finder - Tek klasör dosya duplikat bulucu
+            self.duplicate_file_finder = DuplicateFileFinder(self.root)
             
         except Exception as e:
             error_msg = f"Modül başlatma hatası: {e}"
@@ -122,13 +140,22 @@ class ModularFileManager:
         self.gui_manager.open_selected = self.file_operations.open_selected
         
         # Scan Engine bağlantıları
-        self.gui_manager.scan_files = self.scan_engine.scan_files
+        self.gui_manager.scan_files = self.start_scan
         
         # Reporting bağlantıları
         self.gui_manager.analyze_target_disk = self.reporting.analyze_target_disk
 
+        # Duplicate Image Finder bağlantısı
+        self.gui_manager.open_duplicate_finder = self.duplicate_finder.open_window
+        
+        # Duplicate File Finder bağlantısı
+        self.gui_manager.open_duplicate_file_finder = self.duplicate_file_finder.open_window
+
         # Organizasyon işlemi - bu özel bir durum, birden fazla modül kullanır
         self.gui_manager.start_organization = self.start_organization
+        
+        # İşlem durdurma
+        self.gui_manager.stop_operation = self.stop_operation
         
         # Butonları yeniden bağla
         self.rebind_buttons()
@@ -153,6 +180,8 @@ class ModularFileManager:
                 widgets['analyze_btn'].configure(command=self.reporting.analyze_target_disk)
             if 'organize_btn' in widgets:
                 widgets['organize_btn'].configure(command=self.start_organization)
+            if 'stop_btn' in widgets:
+                widgets['stop_btn'].configure(command=self.stop_operation)
                 
             # File manager butonlarını bağla
             if 'back_btn' in widgets:
@@ -175,6 +204,14 @@ class ModularFileManager:
                 widgets['paste_btn'].configure(command=self.file_operations.paste_selected)
             if 'folder_btn' in widgets:
                 widgets['folder_btn'].configure(command=self.file_operations.create_folder)
+            
+            # Duplicate Image Finder butonu
+            if 'duplicate_finder_btn' in widgets:
+                widgets['duplicate_finder_btn'].configure(command=self.duplicate_finder.open_window)
+            
+            # Duplicate File Finder butonu
+            if 'duplicate_file_finder_btn' in widgets:
+                widgets['duplicate_file_finder_btn'].configure(command=self.duplicate_file_finder.open_window)
     
     def rebind_events(self):
         """Event binding'leri yeniden yap"""
@@ -228,6 +265,10 @@ class ModularFileManager:
             # İlk durumda organize butonu deaktif
             if 'organize_btn' in widgets:
                 widgets['organize_btn'].configure(state='disabled')
+            
+            # İlk durumda stop butonu deaktif
+            if 'stop_btn' in widgets:
+                widgets['stop_btn'].configure(state='disabled')
         
         # Klavye kısayollarını kur
         self.setup_keyboard_shortcuts()
@@ -251,9 +292,48 @@ class ModularFileManager:
         # Ctrl+X - Cut
         self.root.bind('<Control-x>', lambda e: self.file_operations.cut_selected())
     
-    def start_organization(self):
-        """Organizasyon işlemini başlat - Thread-safe"""
-        import threading
+    def stop_operation(self):
+        """Çalışan işlemi durdur"""
+        try:
+            # İşlem iptal bayrağını set et
+            self.operation_cancelled = True
+            
+            # Hangi işlem çalışıyorsa onu durdur
+            if self.operation_type == "scan":
+                self.scan_engine.stop_scanning = True
+            elif self.operation_type == "organize":
+                # Organizasyon zaten self.operation_cancelled kontrolü yapıyor
+                pass
+            
+            # UI güncelle
+            if hasattr(self.gui_manager, 'ui_widgets'):
+                widgets = self.gui_manager.ui_widgets
+                if 'stop_btn' in widgets:
+                    widgets['stop_btn'].configure(state='disabled', text="⏹️ Durduruluyor...")
+            
+            # Progress ve time estimation durdur
+            self.gui_manager.stop_time_estimation()
+            
+            # Kullanıcıya bilgi ver
+            def show_stop_message():
+                operation_name = "Tarama" if self.operation_type == "scan" else "Organizasyon"
+                messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                  f"{operation_name} durduruldu. Mevcut işlem tamamlandıktan sonra duracak.")
+                
+                # Butonları normale döndür
+                self._reset_buttons_after_operation()
+            
+            # UI thread'inde mesaj göster
+            self.root.after(100, show_stop_message)
+            
+        except Exception as e:
+            print(f"Stop operation error: {e}")
+
+    def start_scan(self):
+        """Tarama işlemini başlat - Thread-safe"""
+        # İptal bayrağını sıfırla
+        self.operation_cancelled = False
+        self.operation_type = "scan"
         
         # Butonları deaktif et
         if hasattr(self.gui_manager, 'ui_widgets'):
@@ -262,6 +342,32 @@ class ModularFileManager:
                 widgets['organize_btn'].configure(state='disabled')
             if 'scan_btn' in widgets:
                 widgets['scan_btn'].configure(state='disabled')
+            if 'stop_btn' in widgets:
+                widgets['stop_btn'].configure(state='normal')
+        
+        # Scan engine'e stop kontrolü ekle
+        self.scan_engine.stop_scanning = False
+        
+        # Tarama başlat
+        self.scan_engine.scan_files()
+
+    def start_organization(self):
+        """Organizasyon işlemini başlat - Thread-safe"""
+        import threading
+        
+        # İptal bayrağını sıfırla
+        self.operation_cancelled = False
+        self.operation_type = "organize"
+        
+        # Butonları deaktif et
+        if hasattr(self.gui_manager, 'ui_widgets'):
+            widgets = self.gui_manager.ui_widgets
+            if 'organize_btn' in widgets:
+                widgets['organize_btn'].configure(state='disabled')
+            if 'scan_btn' in widgets:
+                widgets['scan_btn'].configure(state='disabled')
+            if 'stop_btn' in widgets:
+                widgets['stop_btn'].configure(state='normal')
         
         # Progress bar'ı sıfırla
         self.gui_manager.progress_var.set(0)
@@ -269,17 +375,24 @@ class ModularFileManager:
         # Thread'de organizasyon başlat
         try:
             organization_thread = threading.Thread(target=self._organization_thread, daemon=True)
+            self.current_operation_thread = organization_thread
             organization_thread.start()
         except Exception as e:
             messagebox.showerror("Hata", f"Organizasyon başlatılamadı: {e}")
             # Butonları yeniden aktif et
-            if hasattr(self.gui_manager, 'ui_widgets'):
-                widgets = self.gui_manager.ui_widgets
-                if 'organize_btn' in widgets:
-                    widgets['organize_btn'].configure(state='normal')
-                if 'scan_btn' in widgets:
-                    widgets['scan_btn'].configure(state='normal')
+            self._reset_buttons_after_operation()
     
+    def _reset_buttons_after_operation(self):
+        """İşlem sonrası butonları normale döndür"""
+        if hasattr(self.gui_manager, 'ui_widgets'):
+            widgets = self.gui_manager.ui_widgets
+            if 'organize_btn' in widgets:
+                widgets['organize_btn'].configure(state='normal')
+            if 'scan_btn' in widgets:
+                widgets['scan_btn'].configure(state='normal')
+            if 'stop_btn' in widgets:
+                widgets['stop_btn'].configure(state='disabled')
+
     def _organization_thread(self):
         """Organizasyon thread'i - Ana thread'den ayrı çalışır"""
         try:
@@ -288,38 +401,19 @@ class ModularFileManager:
             # Hata durumunda UI'yi güncelle
             def error_update():
                 messagebox.showerror("Organizasyon Hatası", f"Organizasyon sırasında hata oluştu: {e}")
-                if hasattr(self.gui_manager, 'ui_widgets'):
-                    widgets = self.gui_manager.ui_widgets
-                    if 'organize_btn' in widgets:
-                        widgets['organize_btn'].configure(state='normal')
-                    if 'scan_btn' in widgets:
-                        widgets['scan_btn'].configure(state='normal')
+                self._reset_buttons_after_operation()
             
             self.root.after(0, error_update)
     
     def _count_total_items_for_organization(self):
-        """Organize edilecek toplam öğe sayısını hesapla - Gerçek rakamlar"""
+        """Organize edilecek toplam öğe sayısını hesapla - Organization structure'dan"""
         total_count = 0
         
-        # Mevcut klasörlerdeki dosyaları say
-        if hasattr(self.scan_engine, 'existing_folder_files'):
-            for files in self.scan_engine.existing_folder_files.values():
-                total_count += len(files)
-        
-        # Yeni yapıdaki unique dosyaları ve klasörleri say
-        if hasattr(self.scan_engine, 'unique_files'):
-            for file_info in self.scan_engine.unique_files:
-                if file_info.get('is_folder', False):
-                    # Klasörler için içerideki öğeleri de say
-                    try:
-                        folder_path = file_info['path']
-                        if os.path.exists(folder_path):
-                            for root, dirs, files in os.walk(folder_path):
-                                total_count += len(dirs) + len(files)
-                    except:
-                        total_count += 1  # Klasör erişilemezse sadece kendisini say
-                else:
-                    total_count += 1
+        # Organization structure'daki tüm dosyaları say
+        if hasattr(self.scan_engine, 'organization_structure'):
+            for main_folder, subfolders in self.scan_engine.organization_structure.items():
+                for subfolder, files in subfolders.items():
+                    total_count += len(files)
         
         return total_count
 
@@ -340,38 +434,258 @@ class ModularFileManager:
             skipped_files = 0
             error_files = 0
             processed_items = 0
+            moved_files = 0  # Taşınan dosya sayısı
+            duplicates_moved = 0  # Duplikat dosya sayısı
+            empty_folders_moved = 0  # Boş klasör sayısı
+            likely_duplicates_moved = 0  # Muhtemel duplikat sayısı
             
             # Duplikat işlem seçeneği
             duplicate_action = self.gui_manager.duplicate_action.get()
             
-            # Önce mevcut klasörlerdeki dosyaları işle
-            if hasattr(self.scan_engine, 'existing_folder_files'):
-                for folder_path, files in self.scan_engine.existing_folder_files.items():
+            # Organizasyon modu seçeneği - Yeni eklendi
+            operation_mode = self.gui_manager.operation_mode.get()  # "copy" veya "move"
+            
+            # Duplicate Files klasörü oluştur
+            duplicate_files_folder = os.path.join(target_base, "Duplicate Files")
+            os.makedirs(duplicate_files_folder, exist_ok=True)
+            
+            # Likely Duplicates klasörü oluştur
+            likely_duplicates_folder = os.path.join(target_base, "Likely Duplicates")
+            os.makedirs(likely_duplicates_folder, exist_ok=True)
+            
+            # TARAMA SONUÇLARINI KULLAN: Organizasyon yapısından direkt taşı
+            # Artık existing_folder_files ve unique_files ayrımı yok - hepsi organization_structure'da
+            
+            for main_folder, subfolders in self.scan_engine.organization_structure.items():
+                # İptal kontrolü
+                if self.operation_cancelled:
+                    def cancelled_update():
+                        messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                           "Organizasyon kullanıcı tarafından durduruldu.")
+                        self._reset_buttons_after_operation()
+                    self.root.after(0, cancelled_update)
+                    return
+                
+                # ÖZEL DURUM: Duplicate Files ve Likely Duplicates klasörleri
+                # Bu klasörler zaten doğru organize edilmiş, sadece dosyaları taşı
+                if main_folder in ["Duplicate Files", "Likely Duplicates"]:
+                    print(f"🔄 {main_folder} klasörü işleniyor...")
                     
-                    # Yol kontrolünü iyileştir
-                    if os.path.isabs(folder_path):
-                        full_folder_path = folder_path
+                    # Ana klasörü oluştur
+                    main_folder_path = os.path.join(target_base, main_folder)
+                    os.makedirs(main_folder_path, exist_ok=True)
+                    
+                    for subfolder, files in subfolders.items():
+                        # İptal kontrolü
+                        if self.operation_cancelled:
+                            def cancelled_update():
+                                messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                                   "Organizasyon kullanıcı tarafından durduruldu.")
+                                self._reset_buttons_after_operation()
+                            self.root.after(0, cancelled_update)
+                            return
+                        
+                        # Hedef klasör yolu
+                        if subfolder:
+                            target_folder_path = os.path.join(main_folder_path, subfolder)
+                        else:
+                            target_folder_path = main_folder_path
+                        
+                        # Hedef klasörü oluştur
+                        os.makedirs(target_folder_path, exist_ok=True)
+                        
+                        # Bu klasördeki tüm dosyaları işle
+                        for file_info in files:
+                            # İptal kontrolü - her dosya için
+                            if self.operation_cancelled:
+                                def cancelled_update():
+                                    messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                                       "Organizasyon kullanıcı tarafından durduruldu.")
+                                    self._reset_buttons_after_operation()
+                                self.root.after(0, cancelled_update)
+                                return
+                            
+                            try:
+                                # Hedef dosya yolu
+                                target_file = os.path.join(target_folder_path, file_info['name'])
+                                
+                                # Self-copy kontrolü
+                                if os.path.normpath(file_info['path']) == os.path.normpath(target_file):
+                                    skipped_files += 1
+                                    processed_items += 1
+                                    
+                                    # Progress güncelle
+                                    progress = (processed_items / total_items) * 100
+                                    def update_progress():
+                                        self.gui_manager.progress_var.set(progress)
+                                    self.root.after(0, update_progress)
+                                    
+                                    # Time estimation güncelle
+                                    def update_time():
+                                        self.gui_manager.update_time_estimation(progress, processed_items, total_items)
+                                    self.root.after(0, update_time)
+                                    continue
+                                
+                                # Aynı isimde dosya varsa numara ekle (duplikat klasöründe bile)
+                                if os.path.exists(target_file):
+                                    counter = 1
+                                    is_folder = file_info.get('is_folder', False)
+                                    
+                                    if is_folder:
+                                        # Klasör için uzantısız işlem
+                                        base_name = file_info['name']
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
+                                    else:
+                                        # Dosya için uzantılı işlem
+                                        base_name, ext = os.path.splitext(file_info['name'])
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}{ext}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
+                                    
+                                    print(f"🔢 {main_folder} içinde dosya numaralandırıldı: {file_info['name']} -> {os.path.basename(target_file)}")
+                                
+                                # Dosya/klasör türüne göre kopyala veya taşı
+                                is_folder = file_info.get('is_folder', False)
+                                
+                                if operation_mode == "move":
+                                    if is_folder:
+                                        # Klasör taşıma için shutil.move kullan
+                                        try:
+                                            import shutil
+                                            shutil.move(file_info['path'], target_file)
+                                            moved_files += 1
+                                            success = True
+                                            if main_folder == "Duplicate Files":
+                                                duplicates_moved += 1
+                                            elif main_folder == "Likely Duplicates":
+                                                likely_duplicates_moved += 1
+                                            print(f"📁 {main_folder} klasörü taşındı: {file_info['name']} -> {target_file}")
+                                        except Exception as e:
+                                            error_files += 1
+                                            success = False
+                                            print(f"⚠️ {main_folder} klasör taşıma hatası: {file_info['name']} - {e}")
+                                    else:
+                                        # Normal dosya taşıma
+                                        success, message = self.file_operations.move_file_optimized(file_info['path'], target_file)
+                                        if success:
+                                            moved_files += 1
+                                            if main_folder == "Duplicate Files":
+                                                duplicates_moved += 1
+                                            elif main_folder == "Likely Duplicates":
+                                                likely_duplicates_moved += 1
+                                            print(f"📄 {main_folder} dosyası taşındı: {file_info['name']}")
+                                        else:
+                                            error_files += 1
+                                            print(f"⚠️ {main_folder} dosya taşıma hatası: {file_info['name']} - {message}")
+                                else:  # copy mode
+                                    if is_folder:
+                                        # Klasör kopyalama için shutil.copytree kullan
+                                        try:
+                                            import shutil
+                                            shutil.copytree(file_info['path'], target_file)
+                                            copied_files += 1
+                                            success = True
+                                            if main_folder == "Duplicate Files":
+                                                duplicates_moved += 1
+                                            elif main_folder == "Likely Duplicates":
+                                                likely_duplicates_moved += 1
+                                            print(f"📁 {main_folder} klasörü kopyalandı: {file_info['name']} -> {target_file}")
+                                        except Exception as e:
+                                            error_files += 1
+                                            success = False
+                                            print(f"⚠️ {main_folder} klasör kopyalama hatası: {file_info['name']} - {e}")
+                                    else:
+                                        # Normal dosya kopyalama
+                                        success, message = self.file_operations.copy_file_optimized(file_info['path'], target_file)
+                                        if success:
+                                            copied_files += 1
+                                            if main_folder == "Duplicate Files":
+                                                duplicates_moved += 1
+                                            elif main_folder == "Likely Duplicates":
+                                                likely_duplicates_moved += 1
+                                            print(f"📄 {main_folder} dosyası kopyalandı: {file_info['name']}")
+                                        else:
+                                            error_files += 1
+                                            print(f"⚠️ {main_folder} dosya kopyalama hatası: {file_info['name']} - {message}")
+                                
+                                processed_items += 1
+                                
+                                # Progress güncelle
+                                progress = (processed_items / total_items) * 100
+                                def update_progress():
+                                    self.gui_manager.progress_var.set(progress)
+                                self.root.after(0, update_progress)
+                                
+                                # Time estimation güncelle
+                                def update_time():
+                                    self.gui_manager.update_time_estimation(progress, processed_items, total_items)
+                                self.root.after(0, update_time)
+                            
+                            except Exception as e:
+                                error_files += 1
+                                processed_items += 1
+                                print(f"⚠️ {main_folder} dosya işleme hatası: {e}")
+                                
+                                # Progress güncelle (hata durumunda da)
+                                progress = (processed_items / total_items) * 100
+                                def update_progress():
+                                    self.gui_manager.progress_var.set(progress)
+                                self.root.after(0, update_progress)
+                    
+                    # Bu klasör işlendi, bir sonrakine geç
+                    continue
+                
+                # NORMAL KLASÖRLER: Duplicate Files ve Likely Duplicates dışındaki tüm klasörler
+                print(f"🔄 Normal klasör işleniyor: {main_folder}")
+                
+                # Ana klasörü oluştur
+                main_folder_path = os.path.join(target_base, main_folder)
+                os.makedirs(main_folder_path, exist_ok=True)
+                
+                for subfolder, files in subfolders.items():
+                    # İptal kontrolü
+                    if self.operation_cancelled:
+                        def cancelled_update():
+                            messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                               "Organizasyon kullanıcı tarafından durduruldu.")
+                            self._reset_buttons_after_operation()
+                        self.root.after(0, cancelled_update)
+                        return
+                    
+                    # Hedef klasör yolu
+                    if subfolder:
+                        target_folder_path = os.path.join(main_folder_path, subfolder)
                     else:
-                        full_folder_path = os.path.join(target_base, folder_path)
+                        target_folder_path = main_folder_path
                     
-                    # Klasör var mı kontrol et
-                    if not os.path.exists(full_folder_path):
-                        try:
-                            os.makedirs(full_folder_path, exist_ok=True)
-                        except Exception as e:
-                            continue
+                    # Hedef klasörü oluştur
+                    os.makedirs(target_folder_path, exist_ok=True)
                     
+                    # Bu klasördeki tüm dosyaları işle
                     for file_info in files:
+                        # İptal kontrolü - her dosya için
+                        if self.operation_cancelled:
+                            def cancelled_update():
+                                messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), 
+                                                   "Organizasyon kullanıcı tarafından durduruldu.")
+                                self._reset_buttons_after_operation()
+                            self.root.after(0, cancelled_update)
+                            return
+                        
                         try:
                             # Hedef dosya yolu
-                            target_file = os.path.join(full_folder_path, file_info['name'])
+                            target_file = os.path.join(target_folder_path, file_info['name'])
                             
-                            # Aynı dosya mı kontrol et (self-copy engellemesi)
+                            # Self-copy kontrolü
                             if os.path.normpath(file_info['path']) == os.path.normpath(target_file):
                                 skipped_files += 1
                                 processed_items += 1
                                 
-                                # Progress güncelle (skip durumunda da)
+                                # Progress güncelle
                                 progress = (processed_items / total_items) * 100
                                 def update_progress():
                                     self.gui_manager.progress_var.set(progress)
@@ -383,29 +697,18 @@ class ModularFileManager:
                                 self.root.after(0, update_time)
                                 continue
                             
-                            # Gelişmiş duplikat kontrolü - hash bazlı kontrol
-                            duplicate_found = False
-                            if os.path.exists(target_file):
-                                # Skip mode'da hızlı kontrol
-                                if duplicate_action == "skip":
-                                    # Sadece dosya boyutu kontrolü (çok hızlı)
-                                    try:
-                                        source_size = os.path.getsize(file_info['path'])
-                                        target_size = os.path.getsize(target_file)
-                                        duplicate_found = (source_size == target_size)
-                                    except:
-                                        duplicate_found = True  # Hata durumunda güvenli tarafta ol
-                                else:
-                                    # Diğer modlarda tam kontrol
-                                    if self.file_operations._files_are_identical(file_info['path'], target_file):
-                                        duplicate_found = True
+                            # ARTIK DUPLIKAT KONTROLÜ YOK - Çünkü duplikatlar zaten ayrı klasörlerde
+                            # Sadece normal dosya/klasör işleme
                             
-                            if duplicate_found:
+                            # Aynı isimde dosya/klasör varsa duplikat action'a göre işlem yap
+                            if os.path.exists(target_file):
+                                # Duplikat action kontrolü
                                 if duplicate_action == "skip":
+                                    # Skip - dosyayı atla
                                     skipped_files += 1
                                     processed_items += 1
                                     
-                                    # Progress güncelle (skip durumunda da)
+                                    # Progress güncelle
                                     progress = (processed_items / total_items) * 100
                                     def update_progress():
                                         self.gui_manager.progress_var.set(progress)
@@ -415,54 +718,156 @@ class ModularFileManager:
                                     def update_time():
                                         self.gui_manager.update_time_estimation(progress, processed_items, total_items)
                                     self.root.after(0, update_time)
+                                    
+                                    print(f"⏭️ Dosya atlandı (zaten var): {file_info['name']}")
                                     continue
-                                elif duplicate_action == "ask":
-                                    # UI thread'inde sor
-                                    result = self._ask_duplicate_action(file_info['name'])
-                                    if result == "skip":
-                                        skipped_files += 1
-                                        processed_items += 1
-                                        
-                                        # Progress güncelle (skip durumunda da)
-                                        progress = (processed_items / total_items) * 100
-                                        def update_progress():
-                                            self.gui_manager.progress_var.set(progress)
-                                        self.root.after(0, update_progress)
-                                        
-                                        continue
-                                    elif result == "skip_all":
-                                        duplicate_action = "skip"
-                                        skipped_files += 1
-                                        processed_items += 1
-                                        
-                                        # Progress güncelle (skip durumunda da)
-                                        progress = (processed_items / total_items) * 100
-                                        def update_progress():
-                                            self.gui_manager.progress_var.set(progress)
-                                        self.root.after(0, update_progress)
-                                        
-                                        continue
-                                    elif result == "copy_all":
-                                        duplicate_action = "copy"
-                                
-                                # Aynı isimde dosya varsa numara ekle
-                                if duplicate_action == "copy":
+                                    
+                                elif duplicate_action == "copy":
+                                    # Copy with number - numara ekle
                                     counter = 1
-                                    base_name, ext = os.path.splitext(file_info['name'])
-                                    while os.path.exists(target_file):
-                                        new_name = f"{base_name}_{counter}{ext}"
-                                        target_file = os.path.join(full_folder_path, new_name)
-                                        counter += 1
+                                    is_folder = file_info.get('is_folder', False)
+                                    
+                                    if is_folder:
+                                        # Klasör için uzantısız işlem
+                                        base_name = file_info['name']
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
+                                    else:
+                                        # Dosya için uzantılı işlem
+                                        base_name, ext = os.path.splitext(file_info['name'])
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}{ext}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
+                                    
+                                    print(f"🔢 Dosya numaralandırıldı: {file_info['name']} -> {os.path.basename(target_file)}")
+                                    
+                                elif duplicate_action == "ask":
+                                    # Ask each time - kullanıcıya sor
+                                    action = self._ask_duplicate_action(file_info['name'])
+                                    
+                                    if action in ["skip", "skip_all"]:
+                                        # Skip this file
+                                        skipped_files += 1
+                                        processed_items += 1
+                                        
+                                        # Progress güncelle
+                                        progress = (processed_items / total_items) * 100
+                                        def update_progress():
+                                            self.gui_manager.progress_var.set(progress)
+                                        self.root.after(0, update_progress)
+                                        
+                                        # Time estimation güncelle
+                                        def update_time():
+                                            self.gui_manager.update_time_estimation(progress, processed_items, total_items)
+                                        self.root.after(0, update_time)
+                                        
+                                        print(f"⏭️ Kullanıcı dosyayı atladı: {file_info['name']}")
+                                        
+                                        # Skip all seçildiyse duplicate_action'ı güncelle
+                                        if action == "skip_all":
+                                            duplicate_action = "skip"
+                                            print("⏭️ Tüm duplikatlar atlanacak")
+                                        
+                                        continue
+                                        
+                                    elif action in ["copy", "copy_all"]:
+                                        # Copy with number
+                                        counter = 1
+                                        is_folder = file_info.get('is_folder', False)
+                                        
+                                        if is_folder:
+                                            # Klasör için uzantısız işlem
+                                            base_name = file_info['name']
+                                            while os.path.exists(target_file):
+                                                new_name = f"{base_name}_{counter}"
+                                                target_file = os.path.join(target_folder_path, new_name)
+                                                counter += 1
+                                        else:
+                                            # Dosya için uzantılı işlem
+                                            base_name, ext = os.path.splitext(file_info['name'])
+                                            while os.path.exists(target_file):
+                                                new_name = f"{base_name}_{counter}{ext}"
+                                                target_file = os.path.join(target_folder_path, new_name)
+                                                counter += 1
+                                        
+                                        print(f"🔢 Kullanıcı dosyayı numaralandırdı: {file_info['name']} -> {os.path.basename(target_file)}")
+                                        
+                                        # Copy all seçildiyse duplicate_action'ı güncelle
+                                        if action == "copy_all":
+                                            duplicate_action = "copy"
+                                            print("🔢 Tüm duplikatlar numaralandırılacak")
+                                else:
+                                    # Varsayılan: numara ekle (eski davranış)
+                                    counter = 1
+                                    is_folder = file_info.get('is_folder', False)
+                                    
+                                    if is_folder:
+                                        # Klasör için uzantısız işlem
+                                        base_name = file_info['name']
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
+                                    else:
+                                        # Dosya için uzantılı işlem
+                                        base_name, ext = os.path.splitext(file_info['name'])
+                                        while os.path.exists(target_file):
+                                            new_name = f"{base_name}_{counter}{ext}"
+                                            target_file = os.path.join(target_folder_path, new_name)
+                                            counter += 1
                             
-                            # Dosyayı kopyala
-                            success, message = self.file_operations.copy_file_optimized(file_info['path'], target_file)
+                            # Dosya/klasör türüne göre kopyala veya taşı
+                            is_folder = file_info.get('is_folder', False)
                             
-                            if success:
-                                copied_files += 1
-                                processed_items += 1
-                            else:
-                                error_files += 1
-                                processed_items += 1
+                            if operation_mode == "move":
+                                if is_folder:
+                                    # Klasör taşıma için shutil.move kullan
+                                    try:
+                                        import shutil
+                                        shutil.move(file_info['path'], target_file)
+                                        moved_files += 1
+                                        success = True
+                                        print(f"📁 Normal klasör taşındı: {file_info['name']} -> {target_file}")
+                                    except Exception as e:
+                                        error_files += 1
+                                        success = False
+                                        print(f"⚠️ Normal klasör taşıma hatası: {file_info['name']} - {e}")
+                                else:
+                                    # Normal dosya taşıma
+                                    success, message = self.file_operations.move_file_optimized(file_info['path'], target_file)
+                                    if success:
+                                        moved_files += 1
+                                        print(f"📄 Normal dosya taşındı: {file_info['name']}")
+                                    else:
+                                        error_files += 1
+                                        print(f"⚠️ Normal dosya taşıma hatası: {file_info['name']} - {message}")
+                            else:  # copy mode
+                                if is_folder:
+                                    # Klasör kopyalama için shutil.copytree kullan
+                                    try:
+                                        import shutil
+                                        shutil.copytree(file_info['path'], target_file)
+                                        copied_files += 1
+                                        success = True
+                                        print(f"📁 Normal klasör kopyalandı: {file_info['name']} -> {target_file}")
+                                    except Exception as e:
+                                        error_files += 1
+                                        success = False
+                                        print(f"⚠️ Normal klasör kopyalama hatası: {file_info['name']} - {e}")
+                                else:
+                                    # Normal dosya kopyalama
+                                    success, message = self.file_operations.copy_file_optimized(file_info['path'], target_file)
+                                    if success:
+                                        copied_files += 1
+                                        print(f"📄 Normal dosya kopyalandı: {file_info['name']}")
+                                    else:
+                                        error_files += 1
+                                        print(f"⚠️ Normal dosya kopyalama hatası: {file_info['name']} - {message}")
+                            
+                            processed_items += 1
                             
                             # Progress güncelle
                             progress = (processed_items / total_items) * 100
@@ -478,211 +883,13 @@ class ModularFileManager:
                         except Exception as e:
                             error_files += 1
                             processed_items += 1
+                            print(f"⚠️ Normal klasör işleme hatası: {e}")
                             
                             # Progress güncelle (hata durumunda da)
                             progress = (processed_items / total_items) * 100
                             def update_progress():
                                 self.gui_manager.progress_var.set(progress)
                             self.root.after(0, update_progress)
-            
-            # Sonra yeni klasör yapısındaki dosyaları işle
-            for i, file_info in enumerate(self.scan_engine.unique_files):
-                try:
-                    # Eğer bu dosya mevcut klasörlerde işlendiyse atla
-                    if hasattr(self.scan_engine, 'existing_folder_files'):
-                        skip_file = False
-                        for folder_files in self.scan_engine.existing_folder_files.values():
-                            if file_info in folder_files:
-                                skip_file = True
-                                break
-                        if skip_file:
-                            continue
-                    
-                    # Klasör mü kontrol et
-                    if file_info.get('is_folder', False):
-                        # Klasör kopyalama - "Yazılım Paketleri" kategorisine koy
-                        source_folder = file_info['path']
-                        target_folder = os.path.join(target_base, "Yazılım Paketleri", file_info['name'])
-                        
-                        # Parent klasörleri oluştur
-                        parent_folder = os.path.dirname(target_folder)
-                        os.makedirs(parent_folder, exist_ok=True)
-                        
-                        # Hedef klasör varsa duplikat kontrolü
-                        if os.path.exists(target_folder):
-                            if duplicate_action == "skip":
-                                skipped_files += 1
-                                # Klasör skip edilirken içindeki öğe sayısını hesapla
-                                folder_item_count = 0
-                                try:
-                                    for root, dirs, files in os.walk(source_folder):
-                                        folder_item_count += len(dirs) + len(files)
-                                except:
-                                    folder_item_count = 1
-                                
-                                processed_items += folder_item_count
-                                
-                                # Progress güncelle
-                                progress = (processed_items / total_items) * 100
-                                def update_progress():
-                                    self.gui_manager.progress_var.set(progress)
-                                self.root.after(0, update_progress)
-                                
-                                continue
-                            else:
-                                # Klasörü birleştir (merge)
-                                try:
-                                    merge_result = self._merge_folders(source_folder, target_folder)
-                                    
-                                    if merge_result:
-                                        copied_files += 1
-                                        # İçerik sayısını hesapla
-                                        folder_item_count = 0
-                                        try:
-                                            for root, dirs, files in os.walk(source_folder):
-                                                folder_item_count += len(dirs) + len(files)
-                                        except:
-                                            folder_item_count = 1
-                                        
-                                        processed_items += folder_item_count
-                                    else:
-                                        error_files += 1
-                                        processed_items += 1
-                                        
-                                except Exception as merge_error:
-                                    error_files += 1
-                                    processed_items += 1
-                        else:
-                            # Yeni klasör kopyalama
-                            try:
-                                shutil.copytree(source_folder, target_folder)
-                                copied_files += 1
-                                
-                                # İçerik sayısını hesapla
-                                folder_item_count = 0
-                                try:
-                                    for root, dirs, files in os.walk(source_folder):
-                                        folder_item_count += len(dirs) + len(files)
-                                except:
-                                    folder_item_count = 1
-                                
-                                processed_items += folder_item_count
-                                
-                            except Exception as e:
-                                error_files += 1
-                                processed_items += 1
-                        
-                        # Progress güncelle
-                        progress = (processed_items / total_items) * 100
-                        def update_progress():
-                            self.gui_manager.progress_var.set(progress)
-                        self.root.after(0, update_progress)
-                        
-                        # Time estimation güncelle
-                        def update_time():
-                            self.gui_manager.update_time_estimation(progress, processed_items, total_items)
-                        self.root.after(0, update_time)
-                        
-                    else:
-                        # Normal dosya işleme - Scan Engine'in organization_structure'ını kullan
-                        # file_info'dan kategori çıkarmak yerine organizasyon yapısından al
-                        file_found = False
-                        for main_folder, subfolders in self.scan_engine.organization_structure.items():
-                            for subfolder, files in subfolders.items():
-                                if file_info in files:
-                                    # Dosya bulundu, doğru kategori klasörünü oluştur
-                                    if subfolder:
-                                        target_folder = os.path.join(target_base, main_folder, subfolder)
-                                    else:
-                                        target_folder = os.path.join(target_base, main_folder)
-                                    
-                                    # Kategori klasörünü oluştur
-                                    os.makedirs(target_folder, exist_ok=True)
-                                    
-                                    # Hedef dosya yolu
-                                    target_file = os.path.join(target_folder, file_info['name'])
-                                    file_found = True
-                                    break
-                            if file_found:
-                                break
-                        
-                        if not file_found:
-                            # Fallback: file_info'dan kategori al veya Other Files'a koy
-                            category = file_info.get('category', 'Other Files')
-                            target_folder = os.path.join(target_base, category)
-                            os.makedirs(target_folder, exist_ok=True)
-                            target_file = os.path.join(target_folder, file_info['name'])
-                        
-                        # Duplikat kontrolü - hash bazlı kontrol
-                        duplicate_found = False
-                        if os.path.exists(target_file):
-                            # Skip mode'da hızlı kontrol
-                            if duplicate_action == "skip":
-                                # Sadece dosya boyutu kontrolü (çok hızlı)
-                                try:
-                                    source_size = os.path.getsize(file_info['path'])
-                                    target_size = os.path.getsize(target_file)
-                                    duplicate_found = (source_size == target_size)
-                                except:
-                                    duplicate_found = True  # Hata durumunda güvenli tarafta ol
-                            else:
-                                # Diğer modlarda tam kontrol
-                                if self.file_operations._files_are_identical(file_info['path'], target_file):
-                                    duplicate_found = True
-                        
-                        if duplicate_found:
-                            if duplicate_action == "skip":
-                                skipped_files += 1
-                            elif duplicate_action == "ask":
-                                result = self._ask_duplicate_action(file_info['name'])
-                                if result == "skip":
-                                    skipped_files += 1
-                                elif result == "skip_all":
-                                    duplicate_action = "skip"
-                                    skipped_files += 1
-                                elif result == "copy_all":
-                                    duplicate_action = "copy"
-                            
-                            # Aynı isimde dosya varsa numara ekle
-                            if duplicate_action == "copy":
-                                counter = 1
-                                base_name, ext = os.path.splitext(file_info['name'])
-                                while os.path.exists(target_file):
-                                    new_name = f"{base_name}_{counter}{ext}"
-                                    target_file = os.path.join(target_folder, new_name)
-                                    counter += 1
-                        
-                        # Dosyayı kopyala (duplicate skip durumu hariç)
-                        if not (duplicate_found and duplicate_action == "skip"):
-                            success, message = self.file_operations.copy_file_optimized(file_info['path'], target_file)
-                            
-                            if success:
-                                copied_files += 1
-                            else:
-                                error_files += 1
-                        
-                        processed_items += 1
-                        
-                        # Progress güncelle
-                        progress = (processed_items / total_items) * 100
-                        def update_progress():
-                            self.gui_manager.progress_var.set(progress)
-                        self.root.after(0, update_progress)
-                        
-                        # Time estimation güncelle
-                        def update_time():
-                            self.gui_manager.update_time_estimation(progress, processed_items, total_items)
-                        self.root.after(0, update_time)
-                
-                except Exception as e:
-                    error_files += 1
-                    processed_items += 1
-                    
-                    # Progress güncelle (hata durumunda da)
-                    progress = (processed_items / total_items) * 100
-                    def update_progress():
-                        self.gui_manager.progress_var.set(progress)
-                    self.root.after(0, update_progress)
             
             # İşlem tamamlandığında UI'yi güncelle
             def final_update():
@@ -693,19 +900,30 @@ class ModularFileManager:
                 
                 # Rapor mesajını çeviri sistemi ile oluştur
                 message = f"{lang_manager.get_text('messages.organization_complete')}\n"
-                message += f"{lang_manager.get_text('messages.copied')}: {copied_files}\n"
+                if operation_mode == "move":
+                    message += f"{lang_manager.get_text('messages.moved')}: {moved_files}\n"
+                    message += f"{lang_manager.get_text('messages.copied')}: {copied_files}\n"
+                else:
+                    message += f"{lang_manager.get_text('messages.copied')}: {copied_files}\n"
                 message += f"{lang_manager.get_text('messages.skipped')}: {skipped_files}\n"
-                message += f"{lang_manager.get_text('messages.errors')}: {error_files}"
+                message += f"{lang_manager.get_text('messages.errors')}: {error_files}\n"
+                
+                # Duplikat ve boş klasör bilgileri
+                if duplicates_moved > 0:
+                    message += f"{lang_manager.get_text('messages.duplicates_moved')}: {duplicates_moved}\n"
+                if likely_duplicates_moved > 0:
+                    message += f"Muhtemel Duplikatlar Taşındı: {likely_duplicates_moved}\n"
+                if empty_folders_moved > 0:
+                    message += f"{lang_manager.get_text('messages.empty_folders_moved')}: {empty_folders_moved}"
                 
                 messagebox.showinfo(lang_manager.get_text('dialogs.info.title'), message)
                 
                 # Butonları yeniden aktif et
-                if hasattr(self.gui_manager, 'ui_widgets'):
-                    widgets = self.gui_manager.ui_widgets
-                    if 'organize_btn' in widgets:
-                        widgets['organize_btn'].configure(state='normal')
-                    if 'scan_btn' in widgets:
-                        widgets['scan_btn'].configure(state='normal')
+                self._reset_buttons_after_operation()
+            
+            # Boş klasörleri temizle
+            if operation_mode == "move":
+                empty_folders_moved += self._cleanup_empty_folders(self.file_operations.source_path, duplicate_files_folder)
             
             self.root.after(0, final_update)
                     
@@ -717,12 +935,7 @@ class ModularFileManager:
                 
                 messagebox.showerror(lang_manager.get_text('dialogs.error.title'), 
                                    lang_manager.get_text('messages.error', error=str(e)))
-                if hasattr(self.gui_manager, 'ui_widgets'):
-                    widgets = self.gui_manager.ui_widgets
-                    if 'organize_btn' in widgets:
-                        widgets['organize_btn'].configure(state='normal')
-                    if 'scan_btn' in widgets:
-                        widgets['scan_btn'].configure(state='normal')
+                self._reset_buttons_after_operation()
             
             self.root.after(0, error_update)
 
@@ -812,6 +1025,66 @@ class ModularFileManager:
         except Exception as e:
             return False
     
+    def _cleanup_empty_folders(self, source_path, duplicate_files_folder):
+        """Boş klasörleri Duplicate Files klasörüne taşı"""
+        import time
+        empty_folders_moved = 0
+        
+        try:
+            # Kaynak klasörde boş klasörleri bul (bottom-up approach)
+            for root, dirs, files in os.walk(source_path, topdown=False):
+                for dir_name in dirs:
+                    dir_path = os.path.join(root, dir_name)
+                    
+                    # Klasör boş mu kontrol et
+                    if self._is_folder_empty(dir_path):
+                        try:
+                            # Boş klasörü Duplicate Files'a taşı
+                            timestamp = int(time.time())
+                            empty_folder_name = f"empty_folder_{timestamp}_{dir_name}"
+                            target_path = os.path.join(duplicate_files_folder, empty_folder_name)
+                            
+                            # Klasörü taşı
+                            shutil.move(dir_path, target_path)
+                            empty_folders_moved += 1
+                            print(f"📁 Boş klasör taşındı: {dir_name} -> Duplicate Files/{empty_folder_name}")
+                            
+                        except Exception as e:
+                            print(f"⚠️ Boş klasör taşıma hatası: {e}")
+                            continue
+            
+            return empty_folders_moved
+            
+        except Exception as e:
+            print(f"⚠️ Boş klasör temizleme hatası: {e}")
+            return 0
+    
+    def _is_folder_empty(self, folder_path):
+        """Klasörün tamamen boş olup olmadığını kontrol et"""
+        try:
+            # Klasör var mı kontrol et
+            if not os.path.exists(folder_path) or not os.path.isdir(folder_path):
+                return False
+            
+            # Klasör içeriğini kontrol et
+            for root, dirs, files in os.walk(folder_path):
+                # Herhangi bir dosya varsa boş değil
+                if files:
+                    return False
+                
+                # Alt klasörlerde dosya var mı kontrol et
+                for subdir in dirs:
+                    subdir_path = os.path.join(root, subdir)
+                    if not self._is_folder_empty(subdir_path):
+                        return False
+            
+            # Hiç dosya bulunamadıysa boş
+            return True
+            
+        except Exception as e:
+            print(f"⚠️ Klasör boşluk kontrolü hatası: {e}")
+            return False
+    
     def quit_application(self):
         """Uygulamayı güvenli şekilde kapat"""
         try:
@@ -847,6 +1120,123 @@ class ModularFileManager:
             
         except Exception as e:
             messagebox.showerror("Kritik Hata", f"Program çalıştırılamadı: {e}")
+
+    def _calculate_file_hash(self, file_path, chunk_size=8192):
+        """Dosya hash'ini hesapla"""
+        try:
+            hash_md5 = hashlib.md5()  # MD5 algoritması kullanılıyor
+            with open(file_path, "rb") as f:  # Dosyayı binary modda aç
+                for chunk in iter(lambda: f.read(chunk_size), b""):  # 8KB parçalar halinde oku
+                    hash_md5.update(chunk)  # Her parçayı hash'e ekle
+            return hash_md5.hexdigest()  # Hexadecimal string döndür
+        except:
+            return None  # Hata durumunda None döndür
+    
+    def _get_media_dimensions(self, file_path):
+        """Media dosyasının boyutlarını al (resim/video)"""
+        try:
+            extension = os.path.splitext(file_path)[1].lower()
+            
+            # Resim dosyaları için
+            if extension in ['.jpg', '.jpeg', '.png', '.bmp', '.gif', '.tiff', '.webp']:
+                return self._get_image_dimensions(file_path)
+            
+            # Video dosyaları için
+            elif extension in ['.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm', '.m4v']:
+                return self._get_video_dimensions(file_path)
+            
+            return None
+            
+        except Exception as e:
+            print(f"⚠️ Media boyut alma hatası: {e}")
+            return None
+    
+    def _get_image_dimensions(self, file_path):
+        """Resim dosyasının boyutlarını al"""
+        try:
+            # PIL/Pillow kullanmadan basit JPEG/PNG header okuma
+            with open(file_path, 'rb') as f:
+                # JPEG için
+                if file_path.lower().endswith(('.jpg', '.jpeg')):
+                    return self._parse_jpeg_dimensions(f)
+                # PNG için
+                elif file_path.lower().endswith('.png'):
+                    return self._parse_png_dimensions(f)
+                # Diğer formatlar için basit yaklaşım
+                else:
+                    return None
+        except:
+            return None
+    
+    def _parse_jpeg_dimensions(self, f):
+        """JPEG dosyasından boyutları oku"""
+        try:
+            f.seek(0)
+            if f.read(2) != b'\xff\xd8':  # JPEG magic number
+                return None
+            
+            while True:
+                marker = f.read(2)
+                if len(marker) != 2:
+                    break
+                    
+                if marker[0] != 0xff:
+                    break
+                    
+                # SOF (Start of Frame) marker'ları
+                if marker[1] in [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]:
+                    f.read(3)  # Length + precision
+                    height = int.from_bytes(f.read(2), 'big')
+                    width = int.from_bytes(f.read(2), 'big')
+                    return f"{width}x{height}"
+                else:
+                    # Segment length oku ve atla
+                    length = int.from_bytes(f.read(2), 'big')
+                    f.seek(length - 2, 1)
+            
+            return None
+        except:
+            return None
+    
+    def _parse_png_dimensions(self, f):
+        """PNG dosyasından boyutları oku"""
+        try:
+            f.seek(0)
+            if f.read(8) != b'\x89PNG\r\n\x1a\n':  # PNG signature
+                return None
+            
+            # IHDR chunk'ı oku
+            f.read(4)  # Chunk length
+            if f.read(4) != b'IHDR':
+                return None
+                
+            width = int.from_bytes(f.read(4), 'big')
+            height = int.from_bytes(f.read(4), 'big')
+            return f"{width}x{height}"
+        except:
+            return None
+    
+    def _get_video_dimensions(self, file_path):
+        """Video dosyasının boyutlarını al (basit yaklaşım)"""
+        try:
+            # Video metadata okuma çok karmaşık, basit bir yaklaşım kullanıyoruz
+            # Gerçek uygulamada ffprobe veya benzeri araçlar kullanılabilir
+            
+            # Dosya boyutuna göre tahmin (çok basit)
+            file_size = os.path.getsize(file_path)
+            
+            # Yaygın video çözünürlükleri ve dosya boyutları
+            if file_size < 50 * 1024 * 1024:  # 50MB altı
+                return "720x480"  # SD
+            elif file_size < 200 * 1024 * 1024:  # 200MB altı
+                return "1280x720"  # HD
+            elif file_size < 500 * 1024 * 1024:  # 500MB altı
+                return "1920x1080"  # Full HD
+            else:
+                return "3840x2160"  # 4K
+                
+        except:
+            return None
 
 
 if __name__ == "__main__":

@@ -44,11 +44,16 @@ class GUIManager:
         # Yeni tarama modu değişkeni: "all", "none", "files_only"
         self.scan_mode = tk.StringVar(value="all")
         
-        # Duplikat kontrol seçenekleri
+        # Duplikat kontrol seçenekleri - Kullanıcı seçimi
         self.duplicate_check_name = tk.BooleanVar(value=True)
         self.duplicate_check_size = tk.BooleanVar(value=True)
-        self.duplicate_check_hash = tk.BooleanVar(value=False)
+        self.duplicate_check_hash = tk.BooleanVar(value=False)  # Varsayılan kapalı (yavaş)
+        self.duplicate_check_media = tk.BooleanVar(value=False)  # Media duplikat kontrolü
+        self.duplicate_check_similar = tk.BooleanVar(value=False)  # Muhtemel duplikat tahmini
         self.duplicate_action = tk.StringVar(value="ask")
+        
+        # Organizasyon modu seçenekleri - Yeni eklendi
+        self.operation_mode = tk.StringVar(value="copy")  # "copy" veya "move"
         
         # Progress ve status
         self.progress_var = tk.DoubleVar()
@@ -141,9 +146,82 @@ class GUIManager:
                        variable=self.scan_mode, value="files_only")
         self.ui_widgets['scan_files_radio'].pack(side=tk.LEFT)
         
+        # Organizasyon modu seçeneği - Yeni eklendi
+        operation_frame = ttk.Frame(parent)
+        operation_frame.grid(row=3, column=0, columnspan=3, sticky=tk.W, pady=(10, 0))
+        
+        self.ui_widgets['operation_label'] = ttk.Label(operation_frame, text=t('operation_mode.label'))
+        self.ui_widgets['operation_label'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.ui_widgets['copy_mode_radio'] = ttk.Radiobutton(operation_frame, text=t('operation_mode.copy'), 
+                       variable=self.operation_mode, value="copy")
+        self.ui_widgets['copy_mode_radio'].pack(side=tk.LEFT, padx=(0, 15))
+        
+        self.ui_widgets['move_mode_radio'] = ttk.Radiobutton(operation_frame, text=t('operation_mode.move'), 
+                       variable=self.operation_mode, value="move")
+        self.ui_widgets['move_mode_radio'].pack(side=tk.LEFT)
+        
+        # Duplikat kontrol seçenekleri
+        duplicate_frame = ttk.Frame(parent)
+        duplicate_frame.grid(row=4, column=0, columnspan=3, sticky=tk.W, pady=(10, 0))
+        
+        self.ui_widgets['duplicate_label'] = ttk.Label(duplicate_frame, text=t('duplicates.control_label'))
+        self.ui_widgets['duplicate_label'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.ui_widgets['dup_name_check'] = ttk.Checkbutton(duplicate_frame, text=t('duplicates.name'), 
+                                                           variable=self.duplicate_check_name)
+        self.ui_widgets['dup_name_check'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.ui_widgets['dup_size_check'] = ttk.Checkbutton(duplicate_frame, text=t('duplicates.size'), 
+                                                           variable=self.duplicate_check_size)
+        self.ui_widgets['dup_size_check'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        self.ui_widgets['dup_hash_check'] = ttk.Checkbutton(duplicate_frame, text=t('duplicates.hash') + " ⚠️", 
+                                                           variable=self.duplicate_check_hash)
+        self.ui_widgets['dup_hash_check'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Yeni seçenek: Media duplikat kontrolü
+        self.duplicate_check_media = tk.BooleanVar(value=False)
+        self.ui_widgets['dup_media_check'] = ttk.Checkbutton(duplicate_frame, text=t('duplicates.media') + " 📸🎬", 
+                                                            variable=self.duplicate_check_media)
+        self.ui_widgets['dup_media_check'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Yeni seçenek: Muhtemel duplikat tahmini
+        self.duplicate_check_similar = tk.BooleanVar(value=False)
+        self.ui_widgets['dup_similar_check'] = ttk.Checkbutton(duplicate_frame, text=t('duplicates.similar') + " 🤔💭", 
+                                                              variable=self.duplicate_check_similar)
+        self.ui_widgets['dup_similar_check'].pack(side=tk.LEFT, padx=(0, 10))
+        
+        # Hash uyarı mesajı
+        hash_warning_frame = ttk.Frame(parent)
+        hash_warning_frame.grid(row=5, column=0, columnspan=3, sticky=tk.W, pady=(2, 0))
+        
+        self.ui_widgets['hash_warning_label'] = ttk.Label(hash_warning_frame, 
+                                 text="⚠️ Hash kontrolü çok yavaştır, büyük dosyalar için önerilmez", 
+                                 foreground="orange", font=('Arial', 8, 'italic'))
+        self.ui_widgets['hash_warning_label'].pack(side=tk.LEFT, padx=(20, 0))
+        
+        # Media uyarı mesajı
+        media_warning_frame = ttk.Frame(parent)
+        media_warning_frame.grid(row=6, column=0, columnspan=3, sticky=tk.W, pady=(2, 0))
+        
+        self.ui_widgets['media_warning_label'] = ttk.Label(media_warning_frame, 
+                                 text="📸 Media kontrolü: Resim/video dosyaları için boyut+boyutlar eşleşmesi (isim farklı olabilir)", 
+                                 foreground="blue", font=('Arial', 8, 'italic'))
+        self.ui_widgets['media_warning_label'].pack(side=tk.LEFT, padx=(20, 0))
+        
+        # Similar uyarı mesajı
+        similar_warning_frame = ttk.Frame(parent)
+        similar_warning_frame.grid(row=7, column=0, columnspan=3, sticky=tk.W, pady=(2, 0))
+        
+        self.ui_widgets['similar_warning_label'] = ttk.Label(similar_warning_frame, 
+                                 text="🤔 Muhtemel Duplikat: İsim benzerliği ile tahmin yapar (ÇOK SIKI kriterler)", 
+                                 foreground="purple", font=('Arial', 8, 'italic'))
+        self.ui_widgets['similar_warning_label'].pack(side=tk.LEFT, padx=(20, 0))
+        
         # Hatırlatma mesajı
         reminder_frame = ttk.Frame(parent)
-        reminder_frame.grid(row=3, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
+        reminder_frame.grid(row=8, column=0, columnspan=3, sticky=tk.W, pady=(5, 0))
         
         self.ui_widgets['reminder_label'] = ttk.Label(reminder_frame, text=t('scan_options.reminder'), 
                                  foreground="blue", font=('Arial', 8, 'italic'))
@@ -301,6 +379,14 @@ class GUIManager:
         if 'reminder_label' in self.ui_widgets:
             self.ui_widgets['reminder_label'].config(text=t('scan_options.reminder'))
         
+        # Operation mode güncelle
+        if 'operation_label' in self.ui_widgets:
+            self.ui_widgets['operation_label'].config(text=t('operation_mode.label'))
+        if 'copy_mode_radio' in self.ui_widgets:
+            self.ui_widgets['copy_mode_radio'].config(text=t('operation_mode.copy'))
+        if 'move_mode_radio' in self.ui_widgets:
+            self.ui_widgets['move_mode_radio'].config(text=t('operation_mode.move'))
+        
         # Bottom panel butonları güncelle
         if 'scan_btn' in self.ui_widgets:
             self.ui_widgets['scan_btn'].config(text=t('buttons.scan'))
@@ -308,6 +394,9 @@ class GUIManager:
             self.ui_widgets['analyze_btn'].config(text=t('buttons.analyze'))
         if 'organize_btn' in self.ui_widgets:
             self.ui_widgets['organize_btn'].config(text=t('buttons.organize'))
+        
+        if 'stop_btn' in self.ui_widgets:
+            self.ui_widgets['stop_btn'].config(text=t('buttons.stop'))
         
         # Duplicate tab güncellemeleri
         if hasattr(self, 'duplicate_tree'):
@@ -502,6 +591,19 @@ class GUIManager:
         self.ui_widgets['analyze_btn'].pack(side=tk.LEFT, padx=(0, 5))
         self.ui_widgets['organize_btn'] = ttk.Button(button_frame, text=t('buttons.organize'), command=self.start_organization)
         self.ui_widgets['organize_btn'].pack(side=tk.LEFT, padx=(0, 5))
+        self.ui_widgets['stop_btn'] = ttk.Button(button_frame, text=t('buttons.stop'), command=self.stop_operation, state='disabled')
+        self.ui_widgets['stop_btn'].pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Duplicate finder butonları
+        duplicate_finder_btn = ttk.Button(button_frame, text=lang_manager.get_text('buttons.duplicate_image_finder'),
+                                         command=self.open_duplicate_finder)
+        duplicate_finder_btn.pack(side=tk.LEFT, padx=(10, 5))
+        self.ui_widgets['duplicate_finder_btn'] = duplicate_finder_btn
+        
+        duplicate_file_finder_btn = ttk.Button(button_frame, text=lang_manager.get_text('buttons.duplicate_file_finder'),
+                                              command=self.open_duplicate_file_finder)
+        duplicate_file_finder_btn.pack(side=tk.LEFT, padx=(0, 5))
+        self.ui_widgets['duplicate_file_finder_btn'] = duplicate_file_finder_btn
         
         # Progress bar
         self.progress_bar = ttk.Progressbar(bottom_frame, variable=self.progress_var, maximum=100)
@@ -600,6 +702,10 @@ class GUIManager:
     def start_organization(self):
         """Organizasyon başlat - file_operations modülünden çağrılacak"""
         pass
+    
+    def stop_operation(self):
+        """İşlemi durdur - main_modular.py'den çağrılacak"""
+        pass
         
 
         
@@ -665,4 +771,12 @@ class GUIManager:
         self.operation_start_time = None
         self.last_progress_time = None
         self.estimated_total_time = None
-        self.time_estimation_var.set("") 
+        self.time_estimation_var.set("")
+    
+    def open_duplicate_finder(self):
+        """Duplikat resim bulucu aracını aç - placeholder"""
+        print("Duplikat resim bulucu açılıyor...")
+    
+    def open_duplicate_file_finder(self):
+        """Duplikat dosya bulucu aracını aç - placeholder"""
+        print("Duplikat dosya bulucu açılıyor...") 

@@ -2,6 +2,26 @@
 
 Tüm önemli değişiklikler bu dosyada belgelenecektir.
 
+## [1.1.0] - 2024-12-XX - Çeviri Sistemi Entegrasyonu
+
+### Eklenen Özellikler
+- 🌐 **Tam Çeviri Sistemi Entegrasyonu**: Tüm modüller artık çeviri sistemini destekliyor
+- 🔍 **Duplicate Finder Çeviri Desteği**: Image ve File Duplicate Finder modülleri tam çeviri desteği
+- 🔄 **Dinamik Dil Değiştirme**: Uygulama çalışırken dil değiştirme özelliği
+- 📝 **Genişletilmiş Çeviri Dosyaları**: Tüm UI elementleri için kapsamlı çeviri desteği
+
+### Düzeltilen Hatalar
+- 🐛 Layout manager çakışması düzeltildi (grid/pack karışımı)
+- 🔧 Duplicate finder modüllerinde eksik metodlar eklendi
+- ⚡ UI thread güvenliği iyileştirildi
+- 🎯 Çeviri anahtarları standardize edildi
+
+### Teknik İyileştirmeler
+- 📦 Modüler çeviri sistemi mimarisi
+- 🔗 Tüm modüller arası çeviri bağlantıları
+- 🛡️ Thread-safe çeviri güncellemeleri
+- 📊 Çeviri kapsama analizi
+
 ## [1.0.0] - 2024-01-XX - İlk Sürüm
 
 ### Eklenen Özellikler
@@ -24,6 +44,8 @@ Tüm önemli değişiklikler bu dosyada belgelenecektir.
 - `reporting.py` - Raporlama sistemi
 - `lang_manager.py` - Çoklu dil desteği
 - `language_switcher.py` - Dil değiştirici widget
+- `duplicate_image_finder.py` - Resim dublicate bulucu
+- `duplicate_file_finder.py` - Dosya dublicate bulucu
 
 ### Desteklenen Dosya Kategorileri
 - 🖼️ Resim Dosyaları (jpg, png, gif, bmp, svg, etc.)
