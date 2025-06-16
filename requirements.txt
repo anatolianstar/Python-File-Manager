@@ -20,4 +20,7 @@
 # aiofiles>=23.1.0  # For async file operations
 # pywin32>=305      # For Windows file system information
 
+# For creating executable:
+pyinstaller>=5.0
+
 # No additional packages required for basic functionality! 

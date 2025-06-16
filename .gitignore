@@ -199,6 +199,12 @@ test_*.py
 test_data/
 test_files/
 
+# PyInstaller build files
+build/
+dist/
+*.spec
+*.exe
+
 # Backup files
 *.backup
 *.orig
