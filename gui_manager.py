@@ -775,8 +775,8 @@ class GUIManager:
     
     def open_duplicate_finder(self):
         """Duplikat resim bulucu aracını aç - placeholder"""
-        print("Duplikat resim bulucu açılıyor...")
+        pass
     
     def open_duplicate_file_finder(self):
         """Duplikat dosya bulucu aracını aç - placeholder"""
-        print("Duplikat dosya bulucu açılıyor...") 
+        pass 

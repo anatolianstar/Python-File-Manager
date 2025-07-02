@@ -8,7 +8,6 @@ import os
 import sys
 import subprocess
 import shutil
-from pathlib import Path
 
 def check_dependencies():
     """Gerekli bağımlılıkları kontrol et"""
@@ -34,13 +33,10 @@ def prepare_build_directory():
     print("📁 Build dizini hazırlanıyor...")
     
     # Eski build dosyalarını temizle
-    if os.path.exists("dist"):
-        shutil.rmtree("dist")
-        print("🗑️ Eski dist klasörü temizlendi")
-    
-    if os.path.exists("build"):
-        shutil.rmtree("build")
-        print("🗑️ Eski build klasörü temizlendi")
+    for folder in ["dist", "build"]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+            print(f"🗑️ Eski {folder} klasörü temizlendi")
     
     # Geçici spec dosyasını sil
     spec_file = "main_modular.spec"
@@ -58,29 +54,19 @@ def create_exe():
         "--onefile",                    # Tek dosya olarak paketle
         "--windowed",                   # Console window gösterme
         "--name=Python-File-Manager",   # Exe dosya adı
-        "--icon=icon.ico",              # İkon (varsa)
         "--add-data=languages;languages",  # Dil dosyaları
         "--add-data=*.json;.",          # JSON ayar dosyaları
         "--hidden-import=tkinter",      # Tkinter modülü
         "--hidden-import=threading",    # Threading modülü
-        "--hidden-import=hashlib",      # Hashlib modülü
-        "--hidden-import=shutil",       # Shutil modülü
-        "--hidden-import=json",         # JSON modülü
-        "--hidden-import=os",           # OS modülü
-        "--hidden-import=sys",          # Sys modülü
-        "--hidden-import=time",         # Time modülü
-        "--hidden-import=pathlib",      # Pathlib modülü
-        "--hidden-import=collections",  # Collections modülü
-        "--hidden-import=traceback",    # Traceback modülü
         "--collect-all=tkinter",        # Tüm tkinter bileşenleri
-        "--noconsole",                  # Console penceresi açma
         "--clean",                      # Temiz build
         "main_modular.py"               # Ana Python dosyası
     ]
     
-    # İkon dosyası yoksa parametreyi kaldır
-    if not os.path.exists("icon.ico"):
-        cmd = [arg for arg in cmd if not arg.startswith("--icon")]
+    # İkon dosyası varsa ekle
+    if os.path.exists("icon.ico"):
+        cmd.insert(-1, "--icon=icon.ico")
+    else:
         print("⚠️ icon.ico bulunamadı, ikon olmadan devam ediliyor")
     
     try:
@@ -106,22 +92,12 @@ def post_build_tasks():
         size_mb = os.path.getsize(exe_path) / (1024 * 1024)
         print(f"📏 .exe dosya boyutu: {size_mb:.1f} MB")
         
-        # Dil dosyalarını dist klasörüne kopyala
-        if os.path.exists("languages"):
-            dist_languages = os.path.join("dist", "languages")
-            if not os.path.exists(dist_languages):
-                shutil.copytree("languages", dist_languages)
-                print("🌍 Dil dosyaları kopyalandı")
-        
-        # README dosyasını kopyala
-        if os.path.exists("README.md"):
-            shutil.copy("README.md", "dist/README.md")
-            print("📄 README.md kopyalandı")
-        
-        # LICENSE dosyasını kopyala
-        if os.path.exists("LICENSE"):
-            shutil.copy("LICENSE", "dist/LICENSE")
-            print("📜 LICENSE kopyalandı")
+        # Dokümantasyon dosyalarını kopyala
+        docs = ["README.md", "LICENSE"]
+        for doc in docs:
+            if os.path.exists(doc):
+                shutil.copy(doc, f"dist/{doc}")
+                print(f"📄 {doc} kopyalandı")
         
         print(f"🎉 Başarılı! .exe dosyası: {exe_path}")
         print(f"📂 Dist klasörü: {os.path.abspath('dist')}")
@@ -130,29 +106,6 @@ def post_build_tasks():
     else:
         print("❌ .exe dosyası oluşturulamadı")
         return False
-
-def create_installer_script():
-    """Kurulum scripti oluştur"""
-    print("📦 Kurulum scripti oluşturuluyor...")
-    
-    installer_content = '''@echo off
-echo 🚀 Python File Manager v3.0 Installer
-echo.
-echo Bu program dosyalarınızı organize etmenize yardımcı olur.
-echo.
-echo 📁 Kurulum dizini: %CD%
-echo.
-echo ✅ Kurulum tamamlanmıştır!
-echo.
-echo 🎯 Çalıştırmak için: Python-File-Manager.exe
-echo.
-pause
-'''
-    
-    with open("dist/install.bat", "w", encoding="utf-8") as f:
-        f.write(installer_content)
-    
-    print("✅ install.bat oluşturuldu")
 
 def main():
     """Ana build fonksiyonu"""
@@ -176,9 +129,6 @@ def main():
     if not post_build_tasks():
         print("❌ Post-build görevleri başarısız")
         return False
-    
-    # Kurulum scripti oluştur
-    create_installer_script()
     
     print("=" * 50)
     print("🎉 BUILD BAŞARILI!")

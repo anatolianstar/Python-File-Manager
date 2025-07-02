@@ -799,10 +799,8 @@ class FileOperations:
                 try:
                     # ÖĞRENMESİ: Cut işleminden önce öğren (dosya henüz mevcut)
                     if item_data['operation'] == 'cut' and os.path.isfile(source_path):
-                        print(f"🎓 PASTE ÖĞRENME: Cut-paste işleminden öğrenme başlatılıyor")
-                        print(f"🔍 DEBUG: source_path={source_path}, target_path={target_path}, current_path={self.current_path}")
+                        # Cut-paste işleminden öğrenme
                         self.detect_category_move_for_file(source_path, self.current_path)
-                        print(f"🎓 PASTE ÖĞRENME TAMAMLANDI")
                     
                     if os.path.isdir(source_path):
                         # Klasör işlemi - gelişmiş progress callback ile
@@ -1966,10 +1964,8 @@ class FileOperations:
             # ÖĞRENMESİ: Dosya taşıma işleminden öğren
             file_extension = os.path.splitext(source_path)[1].lower()
             if file_extension:
-                print(f"🎓 DOSYA TAŞIMA ÖĞRENME: {file_extension} -> {target_folder}")
-                print(f"🔍 DEBUG: source_path={source_path}, target_folder={target_folder}")
+                # Dosya taşıma öğrenmesi
                 self.detect_category_move_for_file(source_path, target_folder)
-                print(f"🎓 DOSYA TAŞIMA ÖĞRENME TAMAMLANDI")
                     
         except Exception as e:
             messagebox.showerror("Hata", f"Dosya taşıma hatası: {e}")

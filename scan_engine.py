@@ -832,16 +832,7 @@ class ScanEngine:
         # TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından öğren
         print("🔍 TARAMA SIRASI ÖĞRENME BAŞLATILIYOR...")
         
-        # 🧪 TEST AMAÇLI: Zorla öğrenme ekle
-        print("🧪 TEST: Zorla öğrenme testi yapılıyor...")
-        if not hasattr(self.file_ops, 'learned_categories'):
-            self.file_ops.learned_categories = {}
-        
-        # Test uzantısı ekle - her seferinde farklı olsun
-        import time
-        test_ext = f'.test_{int(time.time() % 1000)}'
-        self.file_ops.learned_categories[test_ext] = 'test_category'
-        print(f"🧪 TEST öğrenme eklendi: {test_ext} -> test_category")
+        # Test kodları kaldırıldı
         
         # 🎯 GCODE ÖZEL DÜZELTMESİ: GCODE uzantısını CAD kategorisine ekle
         if '.gcode' not in self.file_ops.learned_categories:
@@ -850,10 +841,9 @@ class ScanEngine:
         
         learning_made = self._learn_from_existing_structure(target_folder_analysis)
         
-        # Zorla öğrenme varsa True döndür
-        if test_ext in self.file_ops.learned_categories or '.gcode' in self.file_ops.learned_categories:
+        # GCODE öğrenme varsa True döndür
+        if '.gcode' in self.file_ops.learned_categories:
             learning_made = True
-            print(f"🧪 TEST: Zorla öğrenme tespit edildi - learning_made = True")
         
         print("🔍 TARAMA SIRASI ÖĞRENME TAMAMLANDI.")
         
@@ -1051,20 +1041,9 @@ class ScanEngine:
         folder_analysis = {}
         
         if not os.path.exists(target_path):
-            print(f"❌ DEBUG: Target path yoksa: {target_path}")
             return folder_analysis
         
         print("🔍 Gelişmiş hedef klasör analizi başlatılıyor...")
-        print(f"🔍 DEBUG: target_path = {target_path}")
-        print(f"🔍 DEBUG: source_path = {source_path}")
-        
-        # Target path içeriğini listele
-        try:
-            target_contents = os.listdir(target_path)
-            print(f"🔍 DEBUG: Target path içeriği = {target_contents}")
-        except Exception as e:
-            print(f"❌ DEBUG: Target path okunamadı: {e}")
-            return folder_analysis
         
         # SORUN ÇÖZÜMÜ: Kaynak klasörün adını al
         source_folder_name = os.path.basename(source_path) if source_path else ""
@@ -1073,10 +1052,6 @@ class ScanEngine:
         try:
             # Derin klasör analizi yap (3 seviye derinlik)
             folder_analysis.update(self._analyze_directory_recursive(target_path, source_path, max_depth=3))
-            
-            print(f"🔍 DEBUG: Recursive analiz sonucu = {len(folder_analysis)} klasör")
-            for folder_name in folder_analysis.keys():
-                print(f"🔍 DEBUG: Bulunan klasör: {folder_name}")
             
             # SORUN ÇÖZÜMÜ: Sonuçları filtrele - kaynak klasörle aynı adlı klasörleri çıkar
             filtered_analysis = {}
@@ -1104,13 +1079,9 @@ class ScanEngine:
                 filtered_analysis[folder_name] = folder_info
             
             print(f"✅ {len(filtered_analysis)} geçerli hedef klasör bulundu")
-            for folder_name, folder_info in filtered_analysis.items():
-                print(f"📂 DEBUG: {folder_name} -> {list(folder_info['extensions'].keys())}")
             
         except Exception as e:
             print(f"❌ Hedef klasör analizi hatası: {e}")
-        
-        print(f"🔍 DEBUG: _analyze_target_folders dönüş = {len(filtered_analysis)} klasör")
         return filtered_analysis
     
     def _analyze_directory_recursive(self, directory_path, source_path, max_depth=3, current_depth=0, parent_path=""):
@@ -1511,8 +1482,6 @@ class ScanEngine:
         """TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından kategorileri öğren"""
         try:
             print("🎓 TARAMA SIRASI ÖĞRENME: Mevcut klasör yapısından öğrenme başlatılıyor...")
-            print(f"🔍 DEBUG: target_folder_analysis = {list(target_folder_analysis.keys())}")
-            print(f"🔍 DEBUG: Başlangıçta learned_categories = {self.file_ops.learned_categories}")
             
             learned_count = 0
             
@@ -1520,13 +1489,8 @@ class ScanEngine:
                 folder_path = folder_info['path']
                 extensions = folder_info['extensions']
                 
-                print(f"🔍 DEBUG: İşlenen klasör: {folder_name}")
-                print(f"🔍 DEBUG: Klasör yolu: {folder_path}")
-                print(f"🔍 DEBUG: Bulunan uzantılar: {extensions}")
-                
                 # Bu klasörün kategori ismi nedir?
                 category = self.file_ops._determine_category_from_path(folder_path)
-                print(f"🔍 DEBUG: Tespit edilen kategori: {category}")
                 
                 if category and category != 'other_files':
                     print(f"📂 Kategori tespit edildi: {folder_name} -> {category}")
@@ -1534,11 +1498,9 @@ class ScanEngine:
                     # Bu klasördeki uzantıları öğren
                     for extension, count in extensions.items():
                         if extension and count > 0:
-                            print(f"🔍 DEBUG: İşlenen uzantı: {extension} (count: {count})")
                             # Mevcut öğrenme sistemindeki kategoriyi kontrol et
                             current_category = self.file_ops._find_extension_in_categories(extension)
                             
-                            print(f"🔍 DEBUG: {extension} mevcut kategori: {current_category}, yeni kategori: {category}")
                             if not current_category or current_category != category:
                                 # Bu uzantıyı öğren
                                 print(f"🎯 MEVCUT YAPIDAN ÖĞRENME: {extension} -> {category} ({count} dosya)")
@@ -1547,9 +1509,7 @@ class ScanEngine:
                                 confidence = min(95, 60 + (count * 5))  # Minimum %60, maksimum %95
                                 
                                 # ÖNEMLİ: learned_categories dictionary'sine ekleme
-                                print(f"📝 DEBUG: learned_categories'e ekleniyor: {extension} -> {category}")
                                 self.file_ops.learned_categories[extension] = category
-                                print(f"📝 DEBUG: Ekleme sonrası learned_categories = {self.file_ops.learned_categories}")
                                 
                                 if not hasattr(self.file_ops, 'category_confidence'):
                                     self.file_ops.category_confidence = {}
@@ -1567,8 +1527,7 @@ class ScanEngine:
                             else:
                                 print(f"✅ ZATEN BİLİNEN: {extension} -> {category}")
             
-            print(f"🔍 DEBUG: Öğrenme döngüsü bitti. learned_count = {learned_count}")
-            print(f"🔍 DEBUG: Son hali learned_categories = {self.file_ops.learned_categories}")
+            # Debug mesajları temizlendi
             
             # Öğrenme sonucu döndür
             if learned_count > 0:
